@@ -1,26 +1,90 @@
-import json
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 
+from langchain.chains import LLMChain
 from langchain.chat_models import ChatOpenAI
-from langchain.prompts import ChatPromptTemplate, HumanMessagePromptTemplate
-from langchain.schema import SystemMessage
+from langchain.memory import ReadOnlySharedMemory
+from langchain.prompts import (
+    ChatPromptTemplate,
+    HumanMessagePromptTemplate,
+    MessagesPlaceholder,
+    SystemMessagePromptTemplate,
+)
 
 model_name = "gpt-4"
 
 SYSTEM_DESCRIPTION = "You are a clinician skilled in Motivational Interviewing."
 
 
+def get_completion(
+    memory: ReadOnlySharedMemory,
+    utterance: str,
+    template: ChatPromptTemplate,
+    model_name=model_name,
+    verbose=True,
+) -> str:
+    llm = ChatOpenAI(model_name=model_name)
+    chain = LLMChain(llm=llm, prompt=template, verbose=verbose, memory=memory)
+    return chain.run(utterance)
+
+
+def get_template(prompt: str) -> ChatPromptTemplate:
+    return ChatPromptTemplate(
+        messages=[
+            SystemMessagePromptTemplate.from_template(
+                f"{SYSTEM_DESCRIPTION}\n{prompt}"
+            ),
+            # The `variable_name` here is what must align with memory
+            MessagesPlaceholder(variable_name="chat_history"),
+            HumanMessagePromptTemplate.from_template("{input}"),
+        ]
+    )
+
+
+def get_affirmation(
+    memory: ReadOnlySharedMemory, utterance: str, model_name=model_name
+) -> str:
+    """Use this whenever the client talks about what they did with any
+    positivity. Affirmation is less of a judgment, more of an appreciation of
+    positive qualities and behaviors. It is more likely to lift motivation and
+    inspire further achievement. Praise the process, NOT the outcome. Be brief,
+    fewer words are better.
+    """
+    return get_completion(
+        memory, utterance, get_template(get_affirmation.__doc__), model_name
+    )
+
+
+def get_open_question(
+    memory: ReadOnlySharedMemory, utterance: str, model_name=model_name
+) -> str:
+    """Use this as a greeting, or when the human makes a positive statement that
+    you want to explore further. Encourage people to say what they think and
+    feel, and open the door to talking about change. In general, open questions
+    begin with words like what, how, and why. It's critically important that
+    you're brief, fewer words are better.
+    """
+    return get_completion(
+        memory, utterance, get_template(get_open_question.__doc__), model_name
+    )
+
+
+def get_listening_statement(
+    memory: ReadOnlySharedMemory, utterance: str, model_name=model_name
+) -> str:
+    """Use this when the human is in distress. Hear what they are saying, and
+    respond with a listening statement (empathy) to motivate behaviour change.
+    Respond to the last thing said below with a listening statement naming the
+    emotion and justifying it in context. Be brief, fewer words are better.
+    """
+    return get_completion(
+        memory, utterance, get_template(get_listening_statement.__doc__), model_name
+    )
+
+
 @dataclass
 class Translation:
     input: str
     output: str
-
-
-def get_completion(
-    utterance: str, template: ChatPromptTemplate, model_name=model_name
-) -> str:
-    llm = ChatOpenAI(model_name=model_name)
-    return llm(template.format_messages(text=utterance)).content
 
 
 affirmation_examples = [
@@ -66,68 +130,6 @@ affirmation_examples = [
     ),
 ]
 
-affirmation_template = ChatPromptTemplate.from_messages(
-    [
-        SystemMessage(
-            content=(
-                f"{SYSTEM_DESCRIPTION} "
-                "Respond to the client text with an affirmation. "
-            )
-        ),
-        HumanMessagePromptTemplate.from_template("{text}"),
-    ]
-)
-
-
-def get_affirmation(utterance: str, model_name=model_name) -> str:
-    """Get an affirmation for utterance. Affirmation is less of a judgment, more
-    of an appreciation of positive qualities and behaviors. It is more likely to
-    lift motivation and inspire further achievement. Use this whenever the
-    client talks about what they did with any positivity."""
-    return get_completion(utterance, affirmation_template, model_name)
-
-
-question_examples = [
-    Translation("Hey", "How's it going?"),
-    Translation("Hey", "How can I help?"),
-    Translation("Hi", "How are you today?"),
-    Translation(
-        "Good. I'm OK—not quite ready to go yet.",
-        "What sort of practice have you been doing?",
-    ),
-    Translation(
-        "I keep trying what you said, but I can’t improve my time in the freestyle.",
-        "What would be the ideal outcome here? What are you shooting for?",
-    ),
-    Translation("Yeah.", "How are you doing?"),
-]
-
-
-question_template = ChatPromptTemplate.from_messages(
-    [
-        SystemMessage(
-            content=(
-                f"{SYSTEM_DESCRIPTION} "
-                "Respond to the client text with an open question. "
-                "In general, open questions begin with words like what, how, and why. "
-                "It's critically important you keep it brief. Fewer words is better. "
-                "Below are some examples in JSON format: "
-                f"{json.dumps([asdict(t) for t in question_examples])}"
-            )
-        ),
-        HumanMessagePromptTemplate.from_template("{text}"),
-    ]
-)
-
-
-def get_open_question(utterance: str, model_name=model_name) -> str:
-    """Be brief, encourage people to say what they think and feel, and open the
-    door to talking about change. Use this as a starting point for a
-    conversation, or when the client makes a positive statement that you want to
-    explore further. The input is a greeting, and the output is an open question."""
-    return get_completion(utterance, question_template, model_name)
-
-
 listening_examples = [
     Translation(
         "I'm finding it really hard to stick to a diet with all the stress at work.",
@@ -171,22 +173,17 @@ listening_examples = [
     ),
 ]
 
-listening_template = ChatPromptTemplate.from_messages(
-    [
-        SystemMessage(
-            content=(
-                f"{SYSTEM_DESCRIPTION} "
-                "Translate the text from a client into a listening statement. "
-            )
-        ),
-        HumanMessagePromptTemplate.from_template("{text}"),
-    ]
-)
-
-
-def get_listening_statement(utterance: str, model_name=model_name) -> str:
-    """Hear what the client is saying, and respond with a listening statement
-    (empathy) to motivate behaviour change. Use this whenever the client appears
-    to be in distress. The input utterance should show signs of distress
-    in the client, and the output is a listening statement."""
-    return get_completion(utterance, listening_template, model_name)
+question_examples = [
+    Translation("Hey", "How's it going?"),
+    Translation("Hey", "How can I help?"),
+    Translation("Hi", "How are you today?"),
+    Translation(
+        "Good. I'm OK—not quite ready to go yet.",
+        "What sort of practice have you been doing?",
+    ),
+    Translation(
+        "I keep trying what you said, but I can’t improve my time in the freestyle.",
+        "What would be the ideal outcome here? What are you shooting for?",
+    ),
+    Translation("Yeah.", "How are you doing?"),
+]

@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "sleepmate"
 version = "0.0.1"
-description = "Sleep Mate"
+description = "SleepMate"
 authors = ["Christopher Kelly <chris@nourishbalancethrive.com>"]
 readme = "README.md"
 packages = [{include = "sleepmate"}]
