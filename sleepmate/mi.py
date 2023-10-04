@@ -12,7 +12,7 @@ from langchain.prompts import (
 
 model_name = "gpt-4"
 
-SYSTEM_DESCRIPTION = "You are a clinician skilled in Motivational Interviewing."
+SYSTEM_DESCRIPTION = "You are an AI clinician skilled in Motivational Interviewing."
 
 
 def get_completion(
@@ -20,10 +20,9 @@ def get_completion(
     utterance: str,
     template: ChatPromptTemplate,
     model_name=model_name,
-    verbose=True,
 ) -> str:
     llm = ChatOpenAI(model_name=model_name)
-    chain = LLMChain(llm=llm, prompt=template, verbose=verbose, memory=memory)
+    chain = LLMChain(llm=llm, prompt=template, memory=memory)
     return chain.run(utterance)
 
 
@@ -43,7 +42,7 @@ def get_template(prompt: str) -> ChatPromptTemplate:
 def get_affirmation(
     memory: ReadOnlySharedMemory, utterance: str, model_name=model_name
 ) -> str:
-    """Use this whenever the client talks about what they did with any
+    """Use this whenever the human talks about what they did with any
     positivity. Affirmation is less of a judgment, more of an appreciation of
     positive qualities and behaviors. It is more likely to lift motivation and
     inspire further achievement. Praise the process, NOT the outcome. Be brief,
@@ -57,11 +56,11 @@ def get_affirmation(
 def get_open_question(
     memory: ReadOnlySharedMemory, utterance: str, model_name=model_name
 ) -> str:
-    """Use this as a greeting, or when the human makes a positive statement that
-    you want to explore further. Encourage people to say what they think and
-    feel, and open the door to talking about change. In general, open questions
-    begin with words like what, how, and why. It's critically important that
-    you're brief, fewer words are better.
+    """Use this when the human makes a positive statement that you want to
+    explore further. Encourage people to say what they think and feel, and open
+    the door to talking about change. In general, open questions begin with
+    words like what, how, and why. It's critically important that you're brief,
+    fewer words are better.
     """
     return get_completion(
         memory, utterance, get_template(get_open_question.__doc__), model_name

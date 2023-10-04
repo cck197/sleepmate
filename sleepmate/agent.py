@@ -22,22 +22,32 @@ def get_tools(funcs, memory: ReadOnlySharedMemory) -> list[Tool]:
 def get_agent(
     funcs,
     system_description,
-    model_name="gpt-3.5-turbo-0613",
+    goal,
+    memory=None,
+    model_name="gpt-4-0613",
     memory_key="chat_history",
-    verbose=True,
 ):
-    memory = ConversationBufferMemory(memory_key=memory_key, return_messages=True)
+    if memory is None:
+        memory = ConversationBufferMemory(memory_key=memory_key, return_messages=True)
     ro_memory = ReadOnlySharedMemory(memory=memory)
     tools = get_tools(funcs, ro_memory)
     prompt = ChatPromptTemplate.from_messages(
         [
-            ("system", system_description),
+            (
+                "system",
+                f"{system_description}"
+                "Greet the human by asking how they're feeling."
+                "Ask their name if you don't know it."
+                f"{goal}",
+            ),
             MessagesPlaceholder(variable_name=memory_key),
             ("human", "{input}"),
             MessagesPlaceholder(variable_name="agent_scratchpad"),
         ]
     )
     agent = OpenAIFunctionsAgent(
-        llm=ChatOpenAI(temperature=0, model=model_name), tools=tools, prompt=prompt
+        llm=ChatOpenAI(temperature=0, model=model_name),
+        tools=tools,
+        prompt=prompt,
     )
-    return AgentExecutor(agent=agent, tools=tools, memory=memory, verbose=verbose)
+    return AgentExecutor(agent=agent, tools=tools, memory=memory)
