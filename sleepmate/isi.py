@@ -1,6 +1,6 @@
 ISI_GOAL_PROMPTS = [
     """
-    Your goal is to survey the human for their Insomnia Severity Index (ISI)
+    My goal is to survey the human for their Insomnia Severity Index (ISI)
     using the standard 7-item questionnaire. Ask if now would be a good time
     then the following questions:
     
@@ -38,12 +38,14 @@ ISI_GOAL_PROMPTS = [
     3: Quite a bit
     4: Very much
 
-    When you've got the answer to all seven questions, add them up and report
-    the total, which should be between 0 and 28. Then add the following
-    interpretation:
+    When you've got the answer to all seven questions, summarise and ask if
+    they're correct. Then add them up and report the total, which should be
+    between 0 and 28. Add the following interpretation:
     0-7: No clinically significant insomnia
     8-14: Subthreshold insomnia
     15-21: Clinical insomnia (moderate severity)
     22-28: Clinical insomnia (severe)
     """
 ]
+
+TOOLS = []

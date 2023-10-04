@@ -57,10 +57,10 @@ def get_open_question(
     memory: ReadOnlySharedMemory, utterance: str, model_name=model_name
 ) -> str:
     """Use this when the human makes a positive statement that you want to
-    explore further. Encourage people to say what they think and feel, and open
-    the door to talking about change. In general, open questions begin with
-    words like what, how, and why. It's critically important that you're brief,
-    fewer words are better.
+    explore further and move towards your goal. Encourage people to say what
+    they think and feel, and open the door to talking about change. In general,
+    open questions begin with words like what, how, and why. It's critically
+    important that you're brief, fewer words are better.
     """
     return get_completion(
         memory, utterance, get_template(get_open_question.__doc__), model_name
@@ -186,3 +186,5 @@ question_examples = [
     ),
     Translation("Yeah.", "How are you doing?"),
 ]
+
+TOOLS = [get_listening_statement, get_open_question, get_affirmation]
