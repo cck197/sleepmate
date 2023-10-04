@@ -5,7 +5,7 @@ from .mi import get_completion, get_template
 model_name = "gpt-4"
 
 
-GOAL_PROMPTS = [
+DIARY_GOAL_PROMPTS = [
     """
     Your goal is find out if the human has ever kept a sleep diary, but don't ask
     until they've confirmed the accuracy of at least one listening statement. If
