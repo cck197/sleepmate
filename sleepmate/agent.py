@@ -17,10 +17,10 @@ TEST_GOAL_PROMPTS = [
 ]
 
 
-def get_tools(funcs, memory: ReadOnlySharedMemory) -> list[Tool]:
+def get_tools(funcs, memory: ReadOnlySharedMemory, goal: str) -> list[Tool]:
     return [
         Tool.from_function(
-            func=partial(f, memory),
+            func=partial(f, memory, goal),
             name=f.__name__,
             description=f.__doc__,
             return_direct=True,
@@ -65,9 +65,8 @@ def get_agent(
     stop_sequence=GoalAchievedHandler.STOP_SEQUENCE):
     if memory is None:
         memory = ConversationBufferMemory(memory_key=memory_key, return_messages=True)
-        memory.save_context({"input": "what's your goal?"}, {"output": goal})
     ro_memory = ReadOnlySharedMemory(memory=memory)
-    tools = get_tools(tools, ro_memory)
+    tools = get_tools(tools, ro_memory, goal)
     prompt = ChatPromptTemplate.from_messages(
         [
             (

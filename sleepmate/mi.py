@@ -26,11 +26,11 @@ def get_completion(
     return chain.run(utterance)
 
 
-def get_template(prompt: str) -> ChatPromptTemplate:
+def get_template(goal: str, prompt: str) -> ChatPromptTemplate:
     return ChatPromptTemplate(
         messages=[
             SystemMessagePromptTemplate.from_template(
-                f"{SYSTEM_DESCRIPTION}\n{prompt}"
+                f"{SYSTEM_DESCRIPTION}\n{goal}\n{prompt}"
             ),
             # The `variable_name` here is what must align with memory
             MessagesPlaceholder(variable_name="chat_history"),
@@ -40,7 +40,7 @@ def get_template(prompt: str) -> ChatPromptTemplate:
 
 
 def get_affirmation(
-    memory: ReadOnlySharedMemory, utterance: str, model_name=model_name
+    memory: ReadOnlySharedMemory, goal: str, utterance: str, model_name=model_name
 ) -> str:
     """Use this whenever the human talks about what they did with any
     positivity. Affirmation is less of a judgment, more of an appreciation of
@@ -49,12 +49,12 @@ def get_affirmation(
     fewer words are better.
     """
     return get_completion(
-        memory, utterance, get_template(get_affirmation.__doc__), model_name
+        memory, utterance, get_template(goal, get_affirmation.__doc__), model_name
     )
 
 
 def get_open_question(
-    memory: ReadOnlySharedMemory, utterance: str, model_name=model_name
+    memory: ReadOnlySharedMemory, goal: str, utterance: str, model_name=model_name
 ) -> str:
     """Use this when the human makes a positive statement that you want to
     explore further and move towards your goal. Encourage people to say what
@@ -63,12 +63,12 @@ def get_open_question(
     important that you're brief, fewer words are better.
     """
     return get_completion(
-        memory, utterance, get_template(get_open_question.__doc__), model_name
+        memory, utterance, get_template(goal, get_open_question.__doc__), model_name
     )
 
 
 def get_listening_statement(
-    memory: ReadOnlySharedMemory, utterance: str, model_name=model_name
+    memory: ReadOnlySharedMemory, goal: str, utterance: str, model_name=model_name
 ) -> str:
     """Use this when the human is in distress. Hear what they are saying, and
     respond with a listening statement (empathy) to motivate behaviour change.
@@ -76,7 +76,10 @@ def get_listening_statement(
     emotion and justifying it in context. Be brief, fewer words are better.
     """
     return get_completion(
-        memory, utterance, get_template(get_listening_statement.__doc__), model_name
+        memory,
+        utterance,
+        get_template(goal, get_listening_statement.__doc__),
+        model_name,
     )
 
 

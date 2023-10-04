@@ -1,6 +1,6 @@
 ISI_GOAL_PROMPTS = [
     """
-    My goal is to survey the human for their Insomnia Severity Index (ISI)
+    Your goal is to survey the human for their Insomnia Severity Index (ISI)
     using the standard 7-item questionnaire. Ask if now would be a good time
     then the following questions:
     

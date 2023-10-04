@@ -7,14 +7,15 @@ model_name = "gpt-4"
 
 DIARY_GOAL_PROMPTS = [
     """
-    My goal is find out if the human has ever kept a sleep diary, but I won't ask
-    until they've confirmed the accuracy of at least one listening statement. If
-    they haven't kept a sleep diary, ask if they'd like the AI to help them keep
-    one. If they have, ask if they'd like to share it with the AI.
+    Your goal is find out if the human has ever kept a sleep diary, but don't
+    ask until they've confirmed the accuracy of at least one listening
+    statement. If they haven't kept a sleep diary, ask if they'd like the AI to
+    help them keep one. If they have, ask if they'd like to share it with the
+    AI.
     """,
     """
-    My goal is to record a sleep diary entry for a given night. First I'll ask
-    if now is a good time to collect the data. Then ask the following questions:
+    Your goal is to record a sleep diary entry for a given night. First ask if
+    now is a good time to collect the data. Then ask the following questions:
 
     1. Date of the night you're recording, in the format "mm/dd/yyyy"
     2. Sleep quality, one of the following: "very good", "good", "okay", "bad",
@@ -34,7 +35,7 @@ DIARY_GOAL_PROMPTS = [
 
 
 def get_sleep_diary_description(
-    memory: ReadOnlySharedMemory, utterance: str, model_name=model_name
+    memory: ReadOnlySharedMemory, goal: str, utterance: str, model_name=model_name
 ) -> str:
     """Use this when the human asks what a sleep diary is. Summarise the
     numbered list of questions:"""
@@ -42,9 +43,10 @@ def get_sleep_diary_description(
         memory,
         utterance,
         get_template(
+            goal,
             get_sleep_diary_description.__doc__
             + DIARY_GOAL_PROMPTS[1]
-            + "End by asking if they'd like the AI to help them keep a sleep diary."
+            + "End by asking if they'd like the AI to help them keep a sleep diary.",
         ),
         model_name,
     )
