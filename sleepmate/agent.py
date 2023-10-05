@@ -10,7 +10,7 @@ from langchain.callbacks.base import BaseCallbackHandler
 from typing import Any
 from langchain.schema import AgentAction
 
-from .tools import TOOLS
+from .tools import import_tools
 
 TEST_GOAL_PROMPTS = [
     """Ask the human their favourite colour.""",
@@ -58,11 +58,14 @@ class X:
 def get_agent(
     system_description,
     goal,
-    tools=TOOLS,
+    tools=None,
     memory=None,
     model_name="gpt-4-0613",
     memory_key="chat_history",
     stop_sequence=GoalAchievedHandler.STOP_SEQUENCE):
+    if tools is None:
+        tools = import_tools()
+    print(f"get_agent len(tools)={len(tools)}")
     if memory is None:
         memory = ConversationBufferMemory(memory_key=memory_key, return_messages=True)
     ro_memory = ReadOnlySharedMemory(memory=memory)

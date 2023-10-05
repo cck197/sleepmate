@@ -21,8 +21,8 @@ def get_self_harm_advice(
 def get_on_topic(
     memory: ReadOnlySharedMemory, goal: str, utterance: str, model_name=model_name
 ) -> str:
-    """Use this when the human asks about health and performance. Tell them you don't know
-    anything about {input}."""
+    """Use this when the human asks about anything other than health and
+    performance. Tell them you don't know anything about {input}."""
 
     return get_completion(
         memory,
