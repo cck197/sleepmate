@@ -1,4 +1,5 @@
 from functools import partial
+import pickle
 
 from langchain.agents import AgentExecutor, OpenAIFunctionsAgent
 from langchain.chat_models import ChatOpenAI
@@ -58,6 +59,16 @@ class X:
         if self.audio:
             play(output)
         return self.goal_accomplished
+    
+    def save_memory(self, filename):
+        with open(filename, "wb") as f:
+            pickle.dump(self.agent_executor.memory, f)
+
+    @staticmethod
+    def load_memory(filename):
+        with open(filename, "rb") as f:
+            return pickle.load(f)
+
 
 
 def get_agent(

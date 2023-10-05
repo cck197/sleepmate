@@ -30,10 +30,12 @@ DIARY_GOAL_PROMPTS = [
     8. Final wake up time
     9. Time you got out of bed
 
-    Convert the answers into the given formats, and end with a summary of the
-    data you've collected and asking if it's correct. Include sleep efficiency
-    as a percentage. Sleep efficiency is the percentage of time spent asleep
-    while in bed.
+    End with a summary of the data you've collected and asking if it's correct.
+    Include sleep efficiency as a percentage. Sleep efficiency is the percentage
+    of time spent asleep while in bed.
+
+    To give the human a rough sense of how their sleep efficiency compares, tell
+    them anything over 85%% is considered normal.
     """,
 ]
 
