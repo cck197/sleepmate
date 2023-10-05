@@ -755,6 +755,23 @@ files = [
 ]
 
 [[package]]
+name = "elevenlabs"
+version = "0.2.26"
+description = "The official elevenlabs python package."
+optional = false
+python-versions = "*"
+files = [
+    {file = "elevenlabs-0.2.26-py3-none-any.whl", hash = "sha256:a3cf8a09157b490cef9a1298957ac120a3e51fbd52282834c463030ba7ccd717"},
+    {file = "elevenlabs-0.2.26.tar.gz", hash = "sha256:1bb4f1074ac8b1c2a7d440dcb43dd122c0f183381901ecbcbccfe7e165c0a3aa"},
+]
+
+[package.dependencies]
+ipython = ">=7.0"
+pydantic = ">=2.0"
+requests = ">=2.20"
+websockets = ">=11.0"
+
+[[package]]
 name = "executing"
 version = "1.2.0"
 description = "Get the currently executing AST node of a frame, and other information"
@@ -4032,4 +4049,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "704b164de546f920cc5f0d8ea1a3b2b4b8627389dcecc55a53a2a8ce62cabdba"
+content-hash = "2d3fd821c08afae4696b8945dc960f19ba91c34ade89d6d7f67612091c0ed7c2"

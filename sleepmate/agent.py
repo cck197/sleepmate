@@ -11,6 +11,7 @@ from typing import Any
 from langchain.schema import AgentAction
 
 from .tools import import_tools
+from .audio import play
 
 TEST_GOAL_PROMPTS = [
     """Ask the human their favourite colour.""",
@@ -43,6 +44,7 @@ class GoalAchievedHandler(BaseCallbackHandler):
 
 class X:
     def __init__(self, *args, **kwargs) -> None:
+        self.audio = kwargs.pop("audio", False)
         self.agent_executor = get_agent(*args, **kwargs)
         self.goal_accomplished = False
         self.stop_handler = GoalAchievedHandler(self.set_goal_accomplished)
@@ -51,13 +53,16 @@ class X:
         self.goal_accomplished = goal_accomplished
 
     def __call__(self, utterance: str) -> bool:
-        print(self.agent_executor.run(utterance, callbacks=[self.stop_handler]))
+        output = self.agent_executor.run(utterance, callbacks=[self.stop_handler])
+        print(output)
+        if self.audio:
+            play(output)
         return self.goal_accomplished
 
 
 def get_agent(
     system_description,
-    goal,
+    goal="",
     tools=None,
     memory=None,
     model_name="gpt-4-0613",
