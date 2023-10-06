@@ -47,7 +47,7 @@ SEEDS_GOAL_PROMPTS = [
     - Don't drink out of anything plastic.
     - Drink fizzy water from 6-8pm (for booze cravings).
     - Write down three tiny things I've been grateful for today.
-    - Listen to a meditation app for 10min.
+    - Do the "leaves on a stream" or "open focus" exercises (for stress).
     - ...you get the idea.
 
     Collect the SEEDS from the human one category at a time. 

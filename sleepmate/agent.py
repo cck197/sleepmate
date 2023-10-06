@@ -7,6 +7,14 @@ from langchain.memory import ConversationBufferMemory, ReadOnlySharedMemory
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.tools import Tool
 from langchain.callbacks.base import BaseCallbackHandler
+from langchain.chat_models import ChatOpenAI
+from langchain.memory import ReadOnlySharedMemory
+from langchain.prompts import (
+    ChatPromptTemplate,
+    HumanMessagePromptTemplate,
+    MessagesPlaceholder,
+    SystemMessagePromptTemplate,
+)
 
 from typing import Any
 from langchain.schema import AgentAction
@@ -18,6 +26,7 @@ TEST_GOAL_PROMPTS = [
     """Ask the human their favourite colour.""",
 ]
 
+model_name = "gpt-4"
 
 def get_tools(funcs, memory: ReadOnlySharedMemory, goal: str) -> list[Tool]:
     return [
@@ -70,7 +79,6 @@ class X:
             return pickle.load(f)
 
 
-
 def get_agent(
     system_description,
     goal="",
@@ -88,16 +96,13 @@ def get_agent(
     tools = get_tools(tools, ro_memory, goal)
     prompt = ChatPromptTemplate.from_messages(
         [
-            (
-                "system",
+            SystemMessagePromptTemplate.from_template(
                 f"{system_description}"
-                "Greet the human by asking how they're feeling."
-                "Ask their name if you don't know it."
                 f"{goal}"
                 f"Once the above goal is complete, output {stop_sequence} to end the conversation." if stop_sequence else "",
             ),
             MessagesPlaceholder(variable_name=memory_key),
-            ("human", "{input}"),
+            HumanMessagePromptTemplate.from_template("{input}"),
             MessagesPlaceholder(variable_name="agent_scratchpad"),
         ]
     )

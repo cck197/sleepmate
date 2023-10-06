@@ -73,7 +73,9 @@ def get_context(utterance: str) -> str:
     for k in range(8, 0, -1):
         docs = db.similarity_search(utterance, k=k)
         context = " ".join([d.page_content for d in docs])
-        if count_tokens(context) < (max_tokens - 200):  # leave some room for the prompt
+        if count_tokens(context) < (
+            max_tokens - 600
+        ):  # leave some room for the prompt TODO
             return context
     assert False, "similarity search failed"
 

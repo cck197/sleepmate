@@ -39,6 +39,18 @@ def get_template(goal: str, prompt: str) -> ChatPromptTemplate:
     )
 
 
+def get_greeting(
+    memory: ReadOnlySharedMemory, goal: str, utterance: str, model_name=model_name
+) -> str:
+    """Use this when the human says hello. Get their name from the conversation
+    below. If you don't their name, ask.  Otherwise, greet them by name and ask
+    them how they're feeling.
+    """
+    return get_completion(
+        memory, utterance, get_template(goal, get_greeting.__doc__), model_name
+    )
+
+
 def get_affirmation(
     memory: ReadOnlySharedMemory, goal: str, utterance: str, model_name=model_name
 ) -> str:
@@ -60,7 +72,7 @@ def get_open_question(
     explore further and move towards your goal. Encourage people to say what
     they think and feel, and open the door to talking about change. In general,
     open questions begin with words like what, how, and why. It's critically
-    important that you're brief, fewer words are better.
+    important that you're brief, fewer words are better. Open question:
     """
     return get_completion(
         memory, utterance, get_template(goal, get_open_question.__doc__), model_name
@@ -190,4 +202,4 @@ question_examples = [
     Translation("Yeah.", "How are you doing?"),
 ]
 
-TOOLS = [get_listening_statement, get_open_question, get_affirmation]
+TOOLS = [get_listening_statement, get_open_question, get_affirmation, get_greeting]
