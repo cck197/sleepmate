@@ -74,7 +74,7 @@ def get_context(utterance: str) -> str:
         docs = db.similarity_search(utterance, k=k)
         context = " ".join([d.page_content for d in docs])
         if count_tokens(context) < (
-            max_tokens - 600
+            max_tokens - 100
         ):  # leave some room for the prompt TODO
             return context
     assert False, "similarity search failed"
@@ -107,8 +107,6 @@ def get_knowledge_answer(
                 """
                 f"{context}"
             ),
-            # The `variable_name` here is what must align with memory
-            MessagesPlaceholder(variable_name="chat_history"),
             HumanMessagePromptTemplate.from_template("{input}"),
         ]
     )

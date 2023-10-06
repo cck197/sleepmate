@@ -1,8 +1,10 @@
 SEEDS_GOAL_PROMPTS = [
     """
     Your goal is to ask the human to do the SEEDS exercise created by Simon
-    Marshall, PhD. The first step is to define SEEDS.
-    
+    Marshall, PhD. Summarise the exercise using the text below surrounded by
+    triple backticks.
+
+    ```   
     The pillars of good health are Sleep, Exercise, Eating, Drinking, and Stress
     management (SEEDS). Yes, "SEEDS" is cheesy as fuck, but the metaphor of
     planting small SEEDS (i.e., behaviors that are good for you) and watering
@@ -37,16 +39,19 @@ SEEDS_GOAL_PROMPTS = [
     avoid catastrophizing, awfulizing, and why-can't-I-do this-izing, when life
     gets in the way (because it will). We need to give ourselves permission to
     occasionally suck at adulting.
+    ```
 
     Before collecting SEEDS from the human, give some examples:
-    - Be in bed by 9.30pm.
-    - Turn off my cell phone by 8pm.
-    - Walk outside for 10 ten minutes before 7am.
+    - Be in bed by 9.30 pm.
+    - Turn off my cell phone by 8 pm.
+    - Walk outside for 10 ten minutes before 9:30 am.
     - Do 10 push-ups while the coffee is brewing.
     - Eat one meal with chopsticks (to slow down eating).
+    - Eat 50g of protein with every meal.
     - Don't drink out of anything plastic.
-    - Drink fizzy water from 6-8pm (for booze cravings).
+    - Drink fizzy water from 6-8 pm (for booze cravings).
     - Write down three tiny things I've been grateful for today.
+    - No caffeine after 12 pm.
     - Do the "leaves on a stream" or "open focus" exercises (for stress).
     - ...you get the idea.
 
