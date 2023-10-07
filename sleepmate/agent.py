@@ -17,20 +17,25 @@ from langchain.prompts import (
     MessagesPlaceholder,
     SystemMessagePromptTemplate,
 )
-import langchain; langchain.verbose = True# langchain.debug = True
+import langchain
+
+langchain.verbose = True  # langchain.debug = True
 from typing import Any
 from langchain.schema import AgentAction
 
-from .tools import import_tools
+from .helpful_scripts import import_attrs, flatten_list_of_dicts
 from .audio import play
 
-TEST_GOAL_PROMPTS = [
-    """Ask the human their favourite colour.""",
+GOALS = [
+    {
+        "test": """Ask the human their favourite colour.""",
+    }
 ]
 
 model_name = "gpt-4"
 
 SLEEPMATE_MEMORY_PATH = os.environ.get("SLEEPMATE_MEMORY_PATH")
+
 
 def get_tools(funcs, memory: ReadOnlySharedMemory, goal: str) -> list[Tool]:
     return [
@@ -43,6 +48,11 @@ def get_tools(funcs, memory: ReadOnlySharedMemory, goal: str) -> list[Tool]:
         for f in funcs
     ]
 
+
+def get_goals() -> list[dict]:
+    return flatten_list_of_dicts(import_attrs("GOALS"))
+
+
 class GoalAchievedHandler(BaseCallbackHandler):
     STOP_SEQUENCE: str = "🚀🚀🚀"
 
@@ -51,9 +61,9 @@ class GoalAchievedHandler(BaseCallbackHandler):
         self.callback = callback
 
     def on_agent_finish(self, action: AgentAction, **kwargs: Any) -> Any:
-            #print(f"on_agent_finish {action}")
-            if self.STOP_SEQUENCE in action.return_values["output"]:
-                 self.callback(action)
+        # print(f"on_agent_finish {action}")
+        if self.STOP_SEQUENCE in action.return_values["output"]:
+            self.callback(action)
 
 
 class X:
@@ -63,7 +73,9 @@ class X:
         self.goal_accomplished = False
         self.stop_handler = GoalAchievedHandler(self.set_goal_accomplished)
 
-    def set_goal_accomplished(self, action: AgentAction, goal_accomplished: bool = True) -> None:
+    def set_goal_accomplished(
+        self, action: AgentAction, goal_accomplished: bool = True
+    ) -> None:
         self.goal_accomplished = goal_accomplished
 
     def __call__(self, utterance: str, save: bool = True) -> bool:
@@ -74,14 +86,14 @@ class X:
         if save:
             self.save_memory()
         return self.goal_accomplished
-    
-    def save_memory(self, filename: str=SLEEPMATE_MEMORY_PATH) -> None:
+
+    def save_memory(self, filename: str = SLEEPMATE_MEMORY_PATH) -> None:
         # print(f"save_memory {filename=}")
         with open(filename, "wb") as f:
             pickle.dump(self.agent_executor.memory, f)
 
     @staticmethod
-    def load_memory(filename: str=SLEEPMATE_MEMORY_PATH) -> ConversationBufferMemory:
+    def load_memory(filename: str = SLEEPMATE_MEMORY_PATH) -> ConversationBufferMemory:
         if Path(filename).exists():
             print(f"load_memory {filename=}")
             with open(filename, "rb") as f:
@@ -89,36 +101,41 @@ class X:
         return ConversationBufferMemory(memory_key="chat_history", return_messages=True)
 
 
-def get_agent(
-    system_description,
-    goal="",
-    tools=None,
-    memory=None,
-    model_name="gpt-4-0613",
-    stop_sequence=GoalAchievedHandler.STOP_SEQUENCE):
-    if tools is None:
-        tools = import_tools()
-    print(f"get_agent len(tools)={len(tools)}")
-    if memory is None:
-        memory = X.load_memory()
-    ro_memory = ReadOnlySharedMemory(memory=memory)
-    tools = get_tools(tools, ro_memory, goal)
-    prompt = ChatPromptTemplate.from_messages(
+def get_agent_prompt(
+    system_description: str,
+    goal: str = "",
+    stop_sequence: str = GoalAchievedHandler.STOP_SEQUENCE,
+) -> ChatPromptTemplate:
+    return ChatPromptTemplate.from_messages(
         [
             SystemMessagePromptTemplate.from_template(
-                f"{system_description}"
-                f"{goal}"
+                f"{system_description}\n"
+                "Your goals is below surrounded by triple backticks:"
+                f"```{goal}```\n"
                 "Once the above goal is complete, output "
-                f"{stop_sequence} to end the conversation." if stop_sequence else "",
+                f"{stop_sequence} to end the conversation."
+                if stop_sequence
+                else "",
             ),
             MessagesPlaceholder(variable_name="chat_history"),
             HumanMessagePromptTemplate.from_template("{input}"),
             MessagesPlaceholder(variable_name="agent_scratchpad"),
         ]
     )
+
+
+def get_agent(
+    system_description, goal="", tools=None, memory=None, model_name="gpt-4-0613"
+):
+    if tools is None:
+        tools = import_attrs("TOOLS")
+    print(f"get_agent len(tools)={len(tools)}")
+    if memory is None:
+        memory = X.load_memory()
+    ro_memory = ReadOnlySharedMemory(memory=memory)
     agent = OpenAIFunctionsAgent(
         llm=ChatOpenAI(temperature=0, model=model_name),
-        tools=tools,
-        prompt=prompt,
+        tools=get_tools(tools, ro_memory, goal),
+        prompt=get_agent_prompt(system_description, goal),
     )
-    return AgentExecutor(agent=agent, tools=tools, memory=memory)
+    return AgentExecutor(agent=agent, tools=agent.tools, memory=memory)

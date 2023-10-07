@@ -9,7 +9,6 @@ from langchain.memory import ReadOnlySharedMemory
 from langchain.prompts import (
     ChatPromptTemplate,
     HumanMessagePromptTemplate,
-    MessagesPlaceholder,
     SystemMessagePromptTemplate,
 )
 from langchain.vectorstores import Chroma
@@ -19,10 +18,12 @@ from .mi import get_completion
 model_name = "gpt-4"
 max_tokens = 8192
 
-KNOWLEDGE_GOAL_PROMPTS = [
-    """
-    Your goal is to answer any questions the human has about sleep.
-    """
+GOALS = [
+    {
+        "knowledge": """
+        Your goal is to answer any questions the human has about sleep.
+        """
+    }
 ]
 
 loader_map = {
