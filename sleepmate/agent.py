@@ -19,7 +19,12 @@ from langchain.schema import AgentAction
 from langchain.tools import Tool
 
 from .audio import play
-from .helpful_scripts import display_markdown, flatten_list_of_dicts, import_attrs
+from .helpful_scripts import (
+    display_markdown,
+    flatten_list_of_dicts,
+    import_attrs,
+    set_attribute,
+)
 from .meta import MetaX
 
 DEBUG = os.environ.get("DEBUG", False)
@@ -28,6 +33,10 @@ if DEBUG:
 
     langchain.verbose = True  # langchain.debug = True
 
+SYSTEM_DESCRIPTION = """
+You are an AI clinician skilled in Acceptance and Commitment Therapy and
+Motivational Interviewing.
+"""
 
 GOALS = [
     {
@@ -40,6 +49,20 @@ model_name = "gpt-4"
 SLEEPMATE_MEMORY_PATH = os.environ.get("SLEEPMATE_MEMORY_PATH")
 
 
+def get_template(goal: str, prompt: str) -> ChatPromptTemplate:
+    return ChatPromptTemplate(
+        messages=[
+            SystemMessagePromptTemplate.from_template(
+                f"{SYSTEM_DESCRIPTION}\n{goal}\n{prompt}"
+            ),
+            # The `variable_name` here is what must align with memory
+            MessagesPlaceholder(variable_name="chat_history"),
+            HumanMessagePromptTemplate.from_template("{input}"),
+        ]
+    )
+
+
+@set_attribute("return_direct", False)
 def get_date(
     memory: ReadOnlySharedMemory, goal: str, utterance: str, model_name=model_name
 ):
@@ -58,7 +81,7 @@ def get_tools(funcs, memory: ReadOnlySharedMemory, goal: str) -> list[Tool]:
             func=partial(f, memory, goal),
             name=f.__name__,
             description=f.__doc__,
-            return_direct=True,
+            return_direct=getattr(f, "return_direct", True),
         )
         for f in funcs
     ]
@@ -133,37 +156,34 @@ class Runner(object):
         self.kwargs["memory"] = X.load_memory()
 
     def run(self):
-        goals = get_goals()
-        previous_goal = None
-        utterance = "hey"
+        self.kwargs["goal"] = None
         while True:
-            # use the memory (chat_history) to determine the goal
-            x_ = MetaX(self.kwargs["memory"])
-            goal = x_()
-            print(f"X.run {goal=}")
-            # if the goal has changed
-            if goal != previous_goal:
-                print(f"X.run {goal=} {previous_goal=}")
-                self.kwargs["goal"] = goals[goal]
-                previous_goal = goal
+            if self.kwargs["goal"] is None:
+                # use the memory (chat_history) to determine the goal
+                goal = MetaX(self.kwargs["memory"])()
+                goal_ = goals.get(goal)
+                if goal_ is not None:
+                    self.kwargs["goal"] = goal_
+                print(f"X.run {goal=}")
+                x = X(*self.args, **self.kwargs)
 
-            x = X(*self.args, **self.kwargs)
+            utterance = input("> ")
             bot_message = x(utterance)
             print(f"> {bot_message}")
-            utterance = input("> ")
+            if x.goal_accomplished:
+                self.kwargs["goal"] = None
 
 
 def get_agent_prompt(
-    system_description: str,
+    system_description: str = SYSTEM_DESCRIPTION,
     goal: str = "",
     stop_sequence: str = GoalAchievedHandler.STOP_SEQUENCE,
 ) -> ChatPromptTemplate:
     return ChatPromptTemplate.from_messages(
         [
             SystemMessagePromptTemplate.from_template(
-                f"{system_description}\n"
-                "Your goals is below surrounded by triple backticks:"
-                f"```{goal}```\n"
+                f"{system_description}\n{goal}"
+                "Complete the goal in as few steps as possible.\n"
                 "Once the above goal is complete, output "
                 f"{stop_sequence} to end the conversation."
                 if stop_sequence
@@ -176,9 +196,7 @@ def get_agent_prompt(
     )
 
 
-def get_agent(
-    system_description, goal="", tools=None, memory=None, model_name="gpt-4-0613"
-):
+def get_agent(goal="", tools=None, memory=None, model_name="gpt-4-0613"):
     if tools is None:
         tools = import_attrs("TOOLS")
     print(f"get_agent len(tools)={len(tools)}")
@@ -188,6 +206,6 @@ def get_agent(
     agent = OpenAIFunctionsAgent(
         llm=ChatOpenAI(temperature=0, model=model_name),
         tools=get_tools(tools, ro_memory, goal),
-        prompt=get_agent_prompt(system_description, goal),
+        prompt=get_agent_prompt(goal),
     )
     return AgentExecutor(agent=agent, tools=agent.tools, memory=memory)

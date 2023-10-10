@@ -56,6 +56,12 @@ def diary_entry(word: str) -> str:
     return "diary_entry"
 
 
+def diary_entry_retrieval(word: str) -> str:
+    """Use any time the human asks to retrieve or summarise their sleep diary
+    data."""
+    return "diary_entry_retrieval"
+
+
 def daily_routine(word: str) -> str:
     """Use this after the human has completed at least one sleep diary entry."""
     return "daily_routine"
@@ -90,6 +96,7 @@ tools = [
         valued_living,
         diary_probe,
         diary_entry,
+        diary_entry_retrieval,
         daily_routine,
         seeds_probe,
         seeds_entry,

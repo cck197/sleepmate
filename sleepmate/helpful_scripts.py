@@ -9,6 +9,14 @@ def display_markdown(text: str) -> None:
     display(Markdown(text))
 
 
+def set_attribute(attr_name, attr_value):
+    def decorator(func):
+        setattr(func, attr_name, attr_value)
+        return func
+
+    return decorator
+
+
 def import_attrs(attr: str, dir: str = None) -> list:
     """Import all the attributes from all the .py files in dir. Return a list of
     all the attributes with the given name."""

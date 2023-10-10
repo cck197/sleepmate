@@ -3,16 +3,11 @@ from dataclasses import dataclass
 from langchain.chains import LLMChain
 from langchain.chat_models import ChatOpenAI
 from langchain.memory import ReadOnlySharedMemory
-from langchain.prompts import (
-    ChatPromptTemplate,
-    HumanMessagePromptTemplate,
-    MessagesPlaceholder,
-    SystemMessagePromptTemplate,
-)
+from langchain.prompts import ChatPromptTemplate
+
+from .agent import get_template
 
 model_name = "gpt-4"
-
-SYSTEM_DESCRIPTION = "You are an AI clinician skilled in Motivational Interviewing."
 
 
 def get_completion(
@@ -24,19 +19,6 @@ def get_completion(
     llm = ChatOpenAI(model_name=model_name)
     chain = LLMChain(llm=llm, prompt=template, memory=memory)
     return chain.run(utterance)
-
-
-def get_template(goal: str, prompt: str) -> ChatPromptTemplate:
-    return ChatPromptTemplate(
-        messages=[
-            SystemMessagePromptTemplate.from_template(
-                f"{SYSTEM_DESCRIPTION}\n{goal}\n{prompt}"
-            ),
-            # The `variable_name` here is what must align with memory
-            MessagesPlaceholder(variable_name="chat_history"),
-            HumanMessagePromptTemplate.from_template("{input}"),
-        ]
-    )
 
 
 def get_greeting(

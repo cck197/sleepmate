@@ -1,7 +1,3 @@
-SYSTEM_DESCRIPTION = (
-    "You are an AI clinician skilled in Acceptance and Commitment Therapy."
-)
-
 THOUGHT_EDITING_LIMITATIONS = """
 Explain changing thoughts in a given direction means taking their content
 seriously. You have to notice them and evaluate them to try to change them,
