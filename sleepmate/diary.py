@@ -20,9 +20,10 @@ GOALS = [
         Your goal is to record a sleep diary entry for a given night. First ask
         if now is a good time to record a diary entry. Then guide them through
         the following questions one at a time. Don't give all the questions at
-        once.  Wait for them to answer each question.
-
-        1. Date of the night you're recording
+        once.  Wait for them to answer each question. If they've recorded a
+        diary entry previously, suggest using the same answer for the new entry.
+        
+        1. Date of the night you're recording (suggest yesterday's date)
         2. Sleep quality, one of the following: "very good", "good", "okay",
         "bad", "very bad"
         3. Time you went to bed

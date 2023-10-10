@@ -1,7 +1,11 @@
 import os
 import pickle
+from datetime import date
 from functools import partial
 from pathlib import Path
+
+# langchain.verbose = True  # langchain.debug = True
+from typing import Any
 
 import langchain
 from langchain.agents import AgentExecutor, OpenAIFunctionsAgent
@@ -14,15 +18,12 @@ from langchain.prompts import (
     MessagesPlaceholder,
     SystemMessagePromptTemplate,
 )
-from langchain.tools import Tool
-
-langchain.verbose = True  # langchain.debug = True
-from typing import Any
-
 from langchain.schema import AgentAction
+from langchain.tools import Tool
 
 from .audio import play
 from .helpful_scripts import flatten_list_of_dicts, import_attrs
+from .meta import MetaX
 
 GOALS = [
     {
@@ -33,6 +34,19 @@ GOALS = [
 model_name = "gpt-4"
 
 SLEEPMATE_MEMORY_PATH = os.environ.get("SLEEPMATE_MEMORY_PATH")
+
+
+def get_date(
+    memory: ReadOnlySharedMemory, goal: str, utterance: str, model_name=model_name
+):
+    """Returns todays date, use this for any questions related to knowing
+    todays date. The input should always be an empty string, and this
+    function will always return todays date - any date mathematics should occur
+    outside this function."""
+    return str(date.today())
+
+
+TOOLS = [get_date]
 
 
 def get_tools(funcs, memory: ReadOnlySharedMemory, goal: str) -> list[Tool]:
@@ -67,9 +81,12 @@ class GoalAchievedHandler(BaseCallbackHandler):
 class X(object):
     def __init__(self, *args, **kwargs) -> None:
         self.audio = kwargs.pop("audio", False)
+        self.hello = kwargs.pop("hello", True)
         self.agent_executor = get_agent(*args, **kwargs)
         self.goal_accomplished = False
         self.stop_handler = GoalAchievedHandler(self.set_goal_accomplished)
+        if self.hello:
+            self("hey")
 
     def set_goal_accomplished(
         self, action: AgentAction, goal_accomplished: bool = True
@@ -97,6 +114,33 @@ class X(object):
             with open(filename, "rb") as f:
                 return pickle.load(f)
         return ConversationBufferMemory(memory_key="chat_history", return_messages=True)
+
+
+class Runner(object):
+    def __init__(self, *args, **kwargs) -> None:
+        self.args = args
+        self.kwargs = kwargs
+        self.kwargs["memory"] = X.load_memory()
+
+    def run(self):
+        goals = get_goals()
+        previous_goal = None
+        utterance = "hey"
+        while True:
+            # use the memory (chat_history) to determine the goal
+            x_ = MetaX(self.kwargs["memory"])
+            goal = x_()
+            print(f"X.run {goal=}")
+            # if the goal has changed
+            if goal != previous_goal:
+                print(f"X.run {goal=} {previous_goal=}")
+                self.kwargs["goal"] = goals[goal]
+                previous_goal = goal
+
+            x = X(*self.args, **self.kwargs)
+            bot_message = x(utterance)
+            print(f"> {bot_message}")
+            utterance = input("> ")
 
 
 def get_agent_prompt(
