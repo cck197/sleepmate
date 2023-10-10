@@ -4,6 +4,13 @@ from .mi import get_completion, get_template
 
 model_name = "gpt-4"
 
+SLEEP_EFFICIENCY = """
+Include sleep efficiency as a percentage. Sleep efficiency is the percentage of
+time spent asleep while in bed.
+
+To give the human a rough sense of how their sleep efficiency compares, tell
+them anything over 85%% is considered normal.
+"""
 
 GOALS = [
     {
@@ -16,7 +23,13 @@ GOALS = [
         """,
     },
     {
-        "diary_entry": """
+        "diary_entry_retrieval": f"""
+        Your goal is to summarise the chat history to display a sleep diary
+        entry for a given date. {SLEEP_EFFICIENCY}
+        """
+    },
+    {
+        "diary_entry": f"""
         Your goal is to record a sleep diary entry for a given night. First ask
         if now is a good time to record a diary entry. Then guide them through
         the following questions one at a time. Don't give all the questions at
@@ -37,11 +50,7 @@ GOALS = [
         11. Any other notes you'd like to add
 
         End with a summary of the data you've collected and asking if it's
-        correct.  Include sleep efficiency as a percentage. Sleep efficiency is
-        the percentage of time spent asleep while in bed.
-
-        To give the human a rough sense of how their sleep efficiency compares,
-        tell them anything over 85%% is considered normal.
+        correct. {SLEEP_EFFICIENCY}
     """,
     },
 ]
@@ -65,4 +74,17 @@ def get_sleep_diary_description(
     )
 
 
-TOOLS = [get_sleep_diary_description]
+def get_sleep_diary_entry(
+    memory: ReadOnlySharedMemory, goal: str, utterance: str, model_name=model_name
+) -> str:
+    """Use this when the user asks to display a sleep diary entry. Find the
+    given date and display the entry."""
+    return get_completion(
+        memory,
+        utterance,
+        get_template(goal, get_sleep_diary_entry.__doc__),
+        model_name,
+    )
+
+
+TOOLS = [get_sleep_diary_description, get_sleep_diary_entry]

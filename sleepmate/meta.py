@@ -1,5 +1,5 @@
-import copy
 import re
+from datetime import date
 from typing import Any, List, Union
 
 from langchain.agents import (
@@ -11,8 +11,13 @@ from langchain.agents import (
 from langchain.chains import LLMChain
 from langchain.chat_models import ChatOpenAI
 from langchain.memory import ConversationBufferMemory, ReadOnlySharedMemory
-from langchain.prompts import StringPromptTemplate
-from langchain.schema import AgentAction, AgentFinish, OutputParserException
+from langchain.prompts import BaseChatPromptTemplate
+from langchain.schema import (
+    AgentAction,
+    AgentFinish,
+    HumanMessage,
+    OutputParserException,
+)
 
 
 def insomnia_severity_index(word: str) -> str:
@@ -37,12 +42,17 @@ def valued_living(word: str) -> str:
 
 
 def diary_probe(word: str) -> str:
-    """Use this when the human has completed the Insomnia Severity Index, but has yet to agree to doing a sleep diary."""
+    """Use this when the human has completed the Insomnia Severity Index, but
+    has yet to agree to doing a sleep diary."""
     return "diary_probe"
 
 
 def diary_entry(word: str) -> str:
-    """Use this after the human has agreed to do a sleep diary."""
+    """Use this after the human has agreed to do a sleep diary, and if it has
+    been more than two days since the last sleep diary entry. Get today's date
+    and subtract the last sleep diary entry date from it. If the difference is
+    greater than 2, ask if the human would like to record a sleep diary
+    entry."""
     return "diary_entry"
 
 
@@ -52,18 +62,28 @@ def daily_routine(word: str) -> str:
 
 
 def seeds_probe(word: str) -> str:
-    """Use this to set up a SEEDS diary after the human was shown a daily routine."""
+    """Use this to set up a SEEDS diary after the human was shown a daily
+    routine."""
     return "seeds_probe"
 
 
 def seeds_entry(word: str) -> str:
-    """Use this to record a SEEDS diary entry after the human has defined their SEEDS."""
+    """Use this to record a SEEDS diary entry after the human has defined their
+    SEEDS."""
     return "seeds_entry"
+
+
+def get_date(word: str):
+    """Returns todays date, use this for any questions related to knowing
+    todays date. This function will always return todays date - any date
+    mathematics should occur outside this function."""
+    return str(date.today())
 
 
 tools = [
     Tool(name=t.__name__, func=t, description=t.__doc__, return_direct=True)
     for t in [
+        get_date,
         insomnia_severity_index,
         open_focus,
         leaves_on_a_stream,
@@ -75,15 +95,24 @@ tools = [
         seeds_entry,
     ]
 ]
+tools.extend(
+    [
+        Tool(name=t.__name__, func=t, description=t.__doc__, return_direct=False)
+        for t in [
+            get_date,
+        ]
+    ]
+)
 
 
-class CustomPromptTemplate(StringPromptTemplate):
+# Set up a prompt template
+class CustomPromptTemplate(BaseChatPromptTemplate):
     # The template to use
     template: str
     # The list of tools available
     tools: List[Tool]
 
-    def format(self, **kwargs) -> str:
+    def format_messages(self, **kwargs) -> str:
         # Get the intermediate steps (AgentAction, Observation tuples)
         # Format them in a particular way
         intermediate_steps = kwargs.pop("intermediate_steps")
@@ -99,7 +128,8 @@ class CustomPromptTemplate(StringPromptTemplate):
         )
         # Create a list of tool names for the tools provided
         kwargs["tool_names"] = ", ".join([tool.name for tool in self.tools])
-        return self.template.format(**kwargs)
+        formatted = self.template.format(**kwargs)
+        return [HumanMessage(content=formatted)]
 
 
 class CustomOutputParser(AgentOutputParser):
@@ -181,11 +211,11 @@ def get_meta_agent(
         stop=["\nObservation:"],
         allowed_tools=tool_names,
     )
-    memory = copy.deepcopy(memory)
-    memory.return_messages = False
+    # memory = copy.deepcopy(memory)
+    # memory.return_messages = False
     return AgentExecutor.from_agent_and_tools(
         agent=agent,
         tools=tools,
         verbose=True,
-        memory=ReadOnlySharedMemory(memory=memory, return_messages=False),
+        memory=ReadOnlySharedMemory(memory=memory),
     )

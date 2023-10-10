@@ -3,11 +3,8 @@ import pickle
 from datetime import date
 from functools import partial
 from pathlib import Path
-
-# langchain.verbose = True  # langchain.debug = True
 from typing import Any
 
-import langchain
 from langchain.agents import AgentExecutor, OpenAIFunctionsAgent
 from langchain.callbacks.base import BaseCallbackHandler
 from langchain.chat_models import ChatOpenAI
@@ -22,8 +19,15 @@ from langchain.schema import AgentAction
 from langchain.tools import Tool
 
 from .audio import play
-from .helpful_scripts import flatten_list_of_dicts, import_attrs
+from .helpful_scripts import display_markdown, flatten_list_of_dicts, import_attrs
 from .meta import MetaX
+
+DEBUG = os.environ.get("DEBUG", False)
+if DEBUG:
+    import langchain
+
+    langchain.verbose = True  # langchain.debug = True
+
 
 GOALS = [
     {
@@ -40,9 +44,8 @@ def get_date(
     memory: ReadOnlySharedMemory, goal: str, utterance: str, model_name=model_name
 ):
     """Returns todays date, use this for any questions related to knowing
-    todays date. The input should always be an empty string, and this
-    function will always return todays date - any date mathematics should occur
-    outside this function."""
+    todays date. This function will always return todays date - any date
+    mathematics should occur outside this function."""
     return str(date.today())
 
 
@@ -65,6 +68,9 @@ def get_goals() -> list[dict]:
     return flatten_list_of_dicts(import_attrs("GOALS"))
 
 
+goals = get_goals()
+
+
 class GoalAchievedHandler(BaseCallbackHandler):
     STOP_SEQUENCE: str = "🚀🚀🚀"
 
@@ -81,6 +87,7 @@ class GoalAchievedHandler(BaseCallbackHandler):
 class X(object):
     def __init__(self, *args, **kwargs) -> None:
         self.audio = kwargs.pop("audio", False)
+        self.display = kwargs.pop("display", True)
         self.hello = kwargs.pop("hello", True)
         self.agent_executor = get_agent(*args, **kwargs)
         self.goal_accomplished = False
@@ -94,13 +101,16 @@ class X(object):
         self.goal_accomplished = goal_accomplished
 
     def __call__(self, utterance: str, save: bool = True) -> bool:
+        self.goal_accomplished = False
         output = self.agent_executor.run(utterance, callbacks=[self.stop_handler])
-        print(output)
+        # print(output)
         if self.audio:
             play(output)
         if save:
             self.save_memory()
-        return self.goal_accomplished
+        if self.display:
+            display_markdown(output)
+        return output
 
     def save_memory(self, filename: str = SLEEPMATE_MEMORY_PATH) -> None:
         # print(f"save_memory {filename=}")

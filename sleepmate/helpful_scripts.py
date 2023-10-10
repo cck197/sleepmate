@@ -1,6 +1,13 @@
 import importlib
 from pathlib import Path
 
+from IPython.display import Markdown, display
+
+
+def display_markdown(text: str) -> None:
+    """Display markdown in Jupyter Notebooks."""
+    display(Markdown(text))
+
 
 def import_attrs(attr: str, dir: str = None) -> list:
     """Import all the attributes from all the .py files in dir. Return a list of
