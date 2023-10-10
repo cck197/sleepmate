@@ -8,7 +8,7 @@ from typing import Any
 from langchain.agents import AgentExecutor, OpenAIFunctionsAgent
 from langchain.callbacks.base import BaseCallbackHandler
 from langchain.chat_models import ChatOpenAI
-from langchain.memory import ConversationBufferMemory, ReadOnlySharedMemory
+from langchain.memory import ConversationTokenBufferMemory, ReadOnlySharedMemory
 from langchain.prompts import (
     ChatPromptTemplate,
     HumanMessagePromptTemplate,
@@ -37,6 +37,8 @@ SYSTEM_DESCRIPTION = """
 You are an AI clinician skilled in Acceptance and Commitment Therapy and
 Motivational Interviewing.
 """
+
+MAX_TOKENS = 8192
 
 GOALS = [
     {
@@ -141,12 +143,21 @@ class X(object):
             pickle.dump(self.agent_executor.memory, f)
 
     @staticmethod
-    def load_memory(filename: str = SLEEPMATE_MEMORY_PATH) -> ConversationBufferMemory:
+    def load_memory(
+        filename: str = SLEEPMATE_MEMORY_PATH,
+        max_token_limit: int = MAX_TOKENS - 1000,  # leave room for a prompt
+        memory_key: str = "chat_history",
+    ) -> ConversationTokenBufferMemory:
         if Path(filename).exists():
             print(f"load_memory {filename=}")
             with open(filename, "rb") as f:
                 return pickle.load(f)
-        return ConversationBufferMemory(memory_key="chat_history", return_messages=True)
+        return ConversationTokenBufferMemory(
+            llm=ChatOpenAI(),
+            memory_key=memory_key,
+            return_messages=True,
+            max_token_limit=max_token_limit,
+        )
 
 
 class Runner(object):
