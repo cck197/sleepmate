@@ -22,7 +22,13 @@ GOALS = [
     {
         "knowledge": """
         Your goal is to answer any questions the human has about sleep.
-        """
+        """,
+        "daily_routine": """
+        Your goal is to help the human identify a daily routine that will help
+        them sleep better. Ask them if they're open to hearing about a daily
+        routine. If they say yes, then run the get_knowledge_answer tool with
+        the query `daily routine`.
+        """,
     }
 ]
 
@@ -85,7 +91,7 @@ def get_knowledge_answer(
     memory: ReadOnlySharedMemory, goal: str, utterance: str, model_name=model_name
 ) -> str:
     """Use this whenever the human asks a specific technical question about
-    sleep. Use this more than the other tools."""
+    sleep."""  # Use this more than the other tools.
 
     context = get_context(utterance)
     prompt = ChatPromptTemplate(
@@ -100,11 +106,11 @@ def get_knowledge_answer(
                 numbered lists where appropriate. Be definitive with your
                 response.
                 
-                Don't say anything that's not mentioned explicitly in the text.
-                If you can't answer the question using the text, say "Sorry I'm
-                not sure." and nothing else.
+                Don't say anything that's not mentioned explicitly your
+                knowledge.  If you can't answer the question using the text, say
+                "Sorry I'm not sure." and nothing else.
 
-                Text:
+                Your knowledge:
                 """
                 f"{context}"
             ),

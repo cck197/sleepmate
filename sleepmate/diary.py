@@ -32,6 +32,8 @@ GOALS = [
         7. Total time you were awake during the night
         8. Final wake up time
         9. Time you got out of bed
+        10. Any medications or aids you used to help you sleep
+        11. Any other notes you'd like to add
 
         End with a summary of the data you've collected and asking if it's
         correct.  Include sleep efficiency as a percentage. Sleep efficiency is

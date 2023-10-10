@@ -2,8 +2,9 @@ GOALS = [
     {
         "insomnia_severity_index": """
         Your goal is to survey the human for their Insomnia Severity Index (ISI)
-        using the standard 7-item questionnaire. Ask if now would be a good time
-        then the following questions:
+        using the standard 7-item questionnaire. but don't ask until they've
+        confirmed the accuracy of at least one listening statement. Ask if now
+        would be a good time then the following questions:
         
         1. Difficulty falling asleep.
         2. Difficulty staying asleep.

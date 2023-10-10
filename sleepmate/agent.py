@@ -1,30 +1,28 @@
-from functools import partial
-import pickle
 import os
+import pickle
+from functools import partial
 from pathlib import Path
 
+import langchain
 from langchain.agents import AgentExecutor, OpenAIFunctionsAgent
-from langchain.chat_models import ChatOpenAI
-from langchain.memory import ConversationBufferMemory, ReadOnlySharedMemory
-from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain.tools import Tool
 from langchain.callbacks.base import BaseCallbackHandler
 from langchain.chat_models import ChatOpenAI
-from langchain.memory import ReadOnlySharedMemory
+from langchain.memory import ConversationBufferMemory, ReadOnlySharedMemory
 from langchain.prompts import (
     ChatPromptTemplate,
     HumanMessagePromptTemplate,
     MessagesPlaceholder,
     SystemMessagePromptTemplate,
 )
-import langchain
+from langchain.tools import Tool
 
 langchain.verbose = True  # langchain.debug = True
 from typing import Any
+
 from langchain.schema import AgentAction
 
-from .helpful_scripts import import_attrs, flatten_list_of_dicts
 from .audio import play
+from .helpful_scripts import flatten_list_of_dicts, import_attrs
 
 GOALS = [
     {
@@ -66,7 +64,7 @@ class GoalAchievedHandler(BaseCallbackHandler):
             self.callback(action)
 
 
-class X:
+class X(object):
     def __init__(self, *args, **kwargs) -> None:
         self.audio = kwargs.pop("audio", False)
         self.agent_executor = get_agent(*args, **kwargs)
