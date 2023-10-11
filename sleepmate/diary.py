@@ -1,6 +1,60 @@
+from datetime import datetime
+
+from dateutil.parser import parse as date_parser
 from langchain.memory import ReadOnlySharedMemory
+from langchain.pydantic_v1 import BaseModel, Field, validator
+from langchain.schema import BaseMemory
+from mongoengine import ReferenceField
 
 from .mi import get_completion, get_template
+from .structured import get_parsed_output, pydantic_to_mongoengine
+from .user import DBUser
+
+
+class SleepDiaryEntry_(BaseModel):
+    quality: str = Field(description="sleep quality")
+    in_bed: datetime = Field(description="time you went to bed")
+    tried_to_fall_asleep: str = Field(description="time you tried to fall asleep")
+    time_to_fall_asleep: str = Field(description="time it took you to fall asleep")
+    times_woke_up: str = Field(
+        description="number of times you woke up during the night"
+    )
+    time_awake: str = Field(description="total time you were awake during the night")
+    final_wake_up: str = Field(description="final wake up time")
+    out_of_bed: str = Field(description="time you got out of bed")
+    medications: str = Field(description="medications or aids used")
+    notes: str = Field(description="any other notes you'd like to add")
+
+
+date_fields = ["in_bed"]
+
+
+class SleepDiaryEntry(SleepDiaryEntry_):
+    @classmethod
+    def schema(cls):
+        s = SleepDiaryEntry_.schema()
+        for key in date_fields:
+            try:
+                del s["properties"][key]["format"]
+            except KeyError:
+                pass
+        return s
+
+    @validator(*date_fields, pre=True)
+    def convert_date_to_datetime(cls, value):
+        return date_parser(value)
+
+
+DBSleepDiaryEntry = pydantic_to_mongoengine(
+    SleepDiaryEntry, extra_fields={"user": ReferenceField(DBUser, required=True)}
+)
+
+
+def get_sleep_diary_entry(memory: BaseMemory) -> SleepDiaryEntry:
+    return get_parsed_output(
+        "summarise the last sleep diary entry", memory, SleepDiaryEntry
+    )
+
 
 model_name = "gpt-4"
 
@@ -24,9 +78,10 @@ GOALS = [
     },
     {
         "diary_entry_retrieval": f"""
-        Your goal is to summarise the chat history to display a sleep diary
-        entry for a given date. {SLEEP_EFFICIENCY}
-        """
+        Your goal is to summarise the JSON object to display a sleep diary entry
+        for a given date. Convert ISO 8601 strings to a human readable format.
+        {SLEEP_EFFICIENCY}
+        """,
     },
     {
         "diary_entry": f"""
@@ -74,17 +129,17 @@ def get_sleep_diary_description(
     )
 
 
-def get_sleep_diary_entry(
-    memory: ReadOnlySharedMemory, goal: str, utterance: str, model_name=model_name
-) -> str:
-    """Use this when the user asks to display a sleep diary entry. Find the
-    given date and display the entry."""
-    return get_completion(
-        memory,
-        utterance,
-        get_template(goal, get_sleep_diary_entry.__doc__),
-        model_name,
-    )
+# def get_sleep_diary_entry(
+#     memory: ReadOnlySharedMemory, goal: str, utterance: str, model_name=model_name
+# ) -> str:
+#     """Use this when the user asks to display a sleep diary entry. Find the
+#     given date and display the entry."""
+#     return get_completion(
+#         memory,
+#         utterance,
+#         get_template(goal, get_sleep_diary_entry.__doc__),
+#         model_name,
+#     )
 
 
-TOOLS = [get_sleep_diary_description, get_sleep_diary_entry]
+TOOLS = [get_sleep_diary_description]  # , get_sleep_diary_entry]

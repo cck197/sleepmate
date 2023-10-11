@@ -68,10 +68,10 @@ GOALS = [
         "seeds_entry": """
         Your goals to ask the human about what SEEDS they managed to do today.
         First, ask if now is a good time to record a SEEDS diary entry.
-        Summarise the SEEDS they gave earlier. Then, for each SEED in each
-        pillar, ask what they got done today. Then summarise and ask if it's
-        correct. Finish by giving a score (/15) for how many they managed to do
-        that day.
+        Summarise the SEEDS they gave earlier. Ask what date the entry is for,
+        suggest today as a default. Then, for each SEED in each pillar, ask what
+        they got done today. Then summarise and ask if it's correct. Finish by
+        giving a score (/15) for how many they managed to do that day.
         """,
     },
 ]

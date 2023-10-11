@@ -8,7 +8,7 @@ from typing import Any
 from langchain.agents import AgentExecutor, OpenAIFunctionsAgent
 from langchain.callbacks.base import BaseCallbackHandler
 from langchain.chat_models import ChatOpenAI
-from langchain.memory import ConversationTokenBufferMemory, ReadOnlySharedMemory
+from langchain.memory import ConversationBufferWindowMemory, ReadOnlySharedMemory
 from langchain.prompts import (
     ChatPromptTemplate,
     HumanMessagePromptTemplate,
@@ -38,7 +38,7 @@ You are an AI clinician skilled in Acceptance and Commitment Therapy and
 Motivational Interviewing.
 """
 
-MAX_TOKENS = 8192
+# MAX_TOKENS = 8192
 
 GOALS = [
     {
@@ -145,18 +145,18 @@ class X(object):
     @staticmethod
     def load_memory(
         filename: str = SLEEPMATE_MEMORY_PATH,
-        max_token_limit: int = MAX_TOKENS - 1000,  # leave room for a prompt
+        k: int = 100,
         memory_key: str = "chat_history",
-    ) -> ConversationTokenBufferMemory:
+    ) -> ConversationBufferWindowMemory:
         if Path(filename).exists():
             print(f"load_memory {filename=}")
             with open(filename, "rb") as f:
                 return pickle.load(f)
-        return ConversationTokenBufferMemory(
+        return ConversationBufferWindowMemory(
             llm=ChatOpenAI(),
             memory_key=memory_key,
             return_messages=True,
-            max_token_limit=max_token_limit,
+            k=k,
         )
 
 
@@ -194,7 +194,8 @@ def get_agent_prompt(
         [
             SystemMessagePromptTemplate.from_template(
                 f"{system_description}\n{goal}"
-                "Complete the goal in as few steps as possible.\n"
+                "Don't ask the human how you can assist them. "
+                "Instead, get to the goal as quickly as possible.\n"
                 "Once the above goal is complete, output "
                 f"{stop_sequence} to end the conversation."
                 if stop_sequence

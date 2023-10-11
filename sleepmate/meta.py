@@ -1,4 +1,5 @@
 import re
+from copy import deepcopy
 from datetime import date
 from typing import Any, List, Union
 
@@ -49,7 +50,7 @@ def diary_probe(word: str) -> str:
 
 def diary_entry(word: str) -> str:
     """Use this after the human has agreed to do a sleep diary, and if it has
-    been more than two days since the last sleep diary entry. Get today's date
+    been more than a day since the last sleep diary entry. Get today's date
     and subtract the last sleep diary entry date from it. If the difference is
     greater than 2, ask if the human would like to record a sleep diary
     entry."""
@@ -63,19 +64,21 @@ def diary_entry_retrieval(word: str) -> str:
 
 
 def daily_routine(word: str) -> str:
-    """Use this after the human has completed at least one sleep diary entry."""
+    """Use this after the human has completed at least one sleep diary entry and
+    before setting up a SEEDS diary."""
     return "daily_routine"
 
 
 def seeds_probe(word: str) -> str:
-    """Use this to set up a SEEDS diary after the human was shown a daily
-    routine."""
+    """Use this after the human was shown a daily routine to set up a SEEDS
+    diary."""
     return "seeds_probe"
 
 
 def seeds_entry(word: str) -> str:
     """Use this to record a SEEDS diary entry after the human has defined their
-    SEEDS."""
+    SEEDS, and if it has been more than two days since the last SEEDS diary
+    entry."""
     return "seeds_entry"
 
 
@@ -167,23 +170,26 @@ class MetaX(object):
         self.agent_executor = get_meta_agent(*args, **kwargs)
 
     def __call__(self, *args: Any, **kwds: Any) -> str:
-        return self.agent_executor.run("what's the next action?")
+        return self.agent_executor.run("what's the next action to take?")
+
+
+model_name = "gpt-4-0613"
+# model_name = "gpt-3.5-turbo-0613"
 
 
 def get_meta_agent(
-    memory: ConversationBufferMemory, model_name="gpt-4-0613"
+    memory: ConversationBufferMemory, model_name=model_name
 ) -> AgentExecutor:
     template = """
-    Answer the following questions as best you can. You have access to the following tools:
-
+    Answer the following questions as best you can. You have access to the
+    following tools:
+    
     {tools}
-
-    The order of the tools is unimportant! Consider each tool carefully.
 
     Use the following format:
 
     Question: the input question you must answer
-    Thought: you should always think about what to do
+    Thought: you should always think step-by-step about what to do
     Action: the action to take, should be one of [{tool_names}]
     Action Input: the input to the action
     Observation: the result of the action
@@ -218,8 +224,8 @@ def get_meta_agent(
         stop=["\nObservation:"],
         allowed_tools=tool_names,
     )
-    # memory = copy.deepcopy(memory)
-    # memory.return_messages = False
+    memory = deepcopy(memory)
+    memory.return_messages = False
     return AgentExecutor.from_agent_and_tools(
         agent=agent,
         tools=tools,

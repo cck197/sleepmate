@@ -16,6 +16,8 @@ chromadb = "^0.4.13"
 tiktoken = "^0.5.1"
 pypdfium2 = "^4.20.0"
 elevenlabs = "^0.2.26"
+mongoengine = "^0.27.0"
+python-dateutil = "^2.8.2"
 
 [tool.poetry.group.dev.dependencies]
 ipython = "^8.15.0"
