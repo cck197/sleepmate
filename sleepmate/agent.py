@@ -19,6 +19,7 @@ from langchain.schema import AgentAction
 from langchain.tools import Tool
 
 from .audio import play
+from .db import *
 from .helpful_scripts import (
     display_markdown,
     flatten_list_of_dicts,
@@ -26,6 +27,7 @@ from .helpful_scripts import (
     set_attribute,
 )
 from .meta import MetaX
+from .user import get_user_from_email
 
 DEBUG = os.environ.get("DEBUG", False)
 if DEBUG:
@@ -114,6 +116,7 @@ class X(object):
         self.audio = kwargs.pop("audio", False)
         self.display = kwargs.pop("display", True)
         self.hello = kwargs.pop("hello", True)
+        self.db_user = get_user_from_email(kwargs.pop("email", None))
         self.agent_executor = get_agent(*args, **kwargs)
         self.goal_accomplished = False
         self.stop_handler = GoalAchievedHandler(self.set_goal_accomplished)
@@ -125,8 +128,20 @@ class X(object):
     ) -> None:
         self.goal_accomplished = goal_accomplished
 
-    def __call__(self, utterance: str, save: bool = True) -> bool:
+    def add_user_to_memory(self) -> None:
+        self.agent_executor.memory.chat_memory.add_ai_message(
+            "what's your name and email?"
+        )
+        self.agent_executor.memory.chat_memory.add_user_message(
+            f"{self.db_user.name}, {self.db_user.email}"
+        )
+
+    def __call__(
+        self, utterance: str, save: bool = True, add_user: bool = True
+    ) -> bool:
         self.goal_accomplished = False
+        if add_user:
+            self.add_user_to_memory()
         output = self.agent_executor.run(utterance, callbacks=[self.stop_handler])
         # print(output)
         if self.audio:
@@ -145,7 +160,7 @@ class X(object):
     @staticmethod
     def load_memory(
         filename: str = SLEEPMATE_MEMORY_PATH,
-        k: int = 100,
+        k: int = 50,
         memory_key: str = "chat_history",
     ) -> ConversationBufferWindowMemory:
         if Path(filename).exists():

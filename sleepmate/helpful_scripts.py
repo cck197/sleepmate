@@ -1,4 +1,6 @@
 import importlib
+import json
+from datetime import datetime
 from pathlib import Path
 
 from IPython.display import Markdown, display
@@ -15,6 +17,12 @@ def set_attribute(attr_name, attr_value):
         return func
 
     return decorator
+
+
+def json_dumps(d: object) -> str:
+    return json.dumps(
+        d, default=lambda o: o.isoformat() if isinstance(o, datetime) else o
+    )
 
 
 def import_attrs(attr: str, dir: str = None) -> list:

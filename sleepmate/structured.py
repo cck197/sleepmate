@@ -1,3 +1,4 @@
+from copy import deepcopy
 from datetime import datetime
 
 from langchain.chains import LLMChain
@@ -35,6 +36,8 @@ def get_parsed_output(query: str, memory: BaseMemory, cls: BaseModel) -> BaseMod
     )
     llm = OpenAI(model_name=model_name, temperature=0.0)
     # llm = ChatOpenAI(model_name=model_name)
+    # memory = deepcopy(memory)
+    # memory.return_messages = False
     chain = LLMChain(llm=llm, prompt=prompt, memory=ReadOnlySharedMemory(memory=memory))
     output = chain({"query": query})
     return parser.parse(output["text"])
