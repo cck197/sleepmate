@@ -20,12 +20,7 @@ from langchain.tools import Tool
 
 from .audio import play
 from .db import *
-from .helpful_scripts import (
-    display_markdown,
-    flatten_list_of_dicts,
-    import_attrs,
-    set_attribute,
-)
+from .helpful_scripts import display_markdown, flatten_list_of_dicts, import_attrs
 from .meta import MetaX
 from .user import get_user_from_email
 
