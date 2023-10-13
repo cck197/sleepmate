@@ -113,6 +113,17 @@ def save_sleep_diary_entry(memory: ReadOnlySharedMemory, *_, **__):
 
 
 @set_attribute("return_direct", False)
+def get_sleep_diary_dates(
+    memory: ReadOnlySharedMemory, goal: str, utterance: str, model_name=model_name
+):
+    """Returns the dates of all sleep diary entries in JSON format. Call with
+    exactly one argument."""
+    return json_dumps(
+        [e.date for e in DBSleepDiaryEntry.objects(user=get_current_user())]
+    )
+
+
+@set_attribute("return_direct", False)
 def get_last_sleep_diary_entry(
     memory: ReadOnlySharedMemory, goal: str, utterance: str, model_name=model_name
 ):
@@ -213,5 +224,6 @@ TOOLS = [
     get_sleep_diary_description,
     get_last_sleep_diary_entry,
     get_date_sleep_diary_entry,
+    get_sleep_diary_dates,
     save_sleep_diary_entry,
 ]

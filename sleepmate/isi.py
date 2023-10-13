@@ -102,6 +102,13 @@ def get_date_isi_diary_entry(
     return get_json_isi_entry(db_entry.to_mongo().to_dict())
 
 
+@set_attribute("return_direct", False)
+def get_isi_dates(memory: ReadOnlySharedMemory, goal: str, utterance: str, **__):
+    """Returns the dates of all Insomnia Severity Index entries in JSON format.
+    Call with exactly one argument."""
+    return json_dumps([e.date for e in DBISIEntry.objects(user=get_current_user())])
+
+
 GOALS = [
     {
         "insomnia_severity_index": """
@@ -162,6 +169,7 @@ GOALS = [
 
 TOOLS = [
     get_last_isi_entry,
-    get_date_isi_entry,
+    get_date_isi_diary_entry,
+    get_isi_dates,
     save_isi_entry,
 ]
