@@ -26,6 +26,7 @@ model_name = "text-davinci-003"
 
 
 def get_parsed_output(query: str, memory: BaseMemory, cls: BaseModel) -> BaseModel:
+    """Get the parsed output from chat_history"""
     # Set up a parser + inject instructions into the prompt template.
     parser = PydanticOutputParser(pydantic_object=cls)
 
@@ -38,9 +39,16 @@ def get_parsed_output(query: str, memory: BaseMemory, cls: BaseModel) -> BaseMod
     # llm = ChatOpenAI(model_name=model_name)
     # memory = deepcopy(memory)
     # memory.return_messages = False
-    chain = LLMChain(llm=llm, prompt=prompt, memory=ReadOnlySharedMemory(memory=memory))
+    chain = LLMChain(llm=llm, prompt=prompt, memory=tail_memory(memory))
     output = chain({"query": query})
     return parser.parse(output["text"])
+
+
+def tail_memory(memory: ReadOnlySharedMemory, n: int = 20) -> ReadOnlySharedMemory:
+    """Return a read only copy of the memory with only the last n messages."""
+    memory_ = deepcopy(memory)
+    memory_.memory.chat_memory.messages = memory_.memory.chat_memory.messages[-n:]
+    return memory_
 
 
 def pydantic_to_mongoengine(pydantic_model, extra_fields=None):

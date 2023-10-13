@@ -8,7 +8,7 @@ from mongoengine import ReferenceField
 
 from .helpful_scripts import json_dumps, set_attribute
 from .mi import get_completion, get_template
-from .structured import pydantic_to_mongoengine
+from .structured import get_parsed_output, pydantic_to_mongoengine
 from .user import DBUser, get_current_user
 
 model_name = "gpt-4"
@@ -33,6 +33,28 @@ class SleepDiaryEntry_(BaseModel):
 date_fields = [
     f.name for f in SleepDiaryEntry_.__fields__.values() if f.type_ == datetime
 ]
+
+
+class SleepDiaryEntry(SleepDiaryEntry_):
+    @classmethod
+    def schema(cls):
+        s = SleepDiaryEntry_.schema()
+        for key in date_fields:
+            try:
+                del s["properties"][key]["format"]
+            except KeyError:
+                pass
+        return s
+
+    @validator(*date_fields, pre=True)
+    def convert_date_to_datetime(cls, value):
+        return date_parser(value)
+
+
+def get_sleep_diary_entry_from_memory(memory: BaseMemory) -> SleepDiaryEntry:
+    return get_parsed_output(
+        "summarise the last sleep diary entry", memory, SleepDiaryEntry
+    )
 
 
 def calculate_sleep_efficiency(data: dict) -> float:
@@ -64,28 +86,14 @@ def adjust_to_baseline_date(sleep_data: dict) -> dict:
     return sleep_data
 
 
-class SleepDiaryEntry(SleepDiaryEntry_):
-    @classmethod
-    def schema(cls):
-        s = SleepDiaryEntry_.schema()
-        for key in date_fields:
-            try:
-                del s["properties"][key]["format"]
-            except KeyError:
-                pass
-        return s
-
-    @validator(*date_fields, pre=True)
-    def convert_date_to_datetime(cls, value):
-        return date_parser(value)
-
-
 DBSleepDiaryEntry = pydantic_to_mongoengine(
     SleepDiaryEntry, extra_fields={"user": ReferenceField(DBUser, required=True)}
 )
 
 
-def save_sleep_diary_entry(user: DBUser, entry: SleepDiaryEntry) -> DBSleepDiaryEntry:
+def save_sleep_diary_entry_to_db(
+    user: DBUser, entry: SleepDiaryEntry
+) -> DBSleepDiaryEntry:
     entry = adjust_to_baseline_date(entry.dict())
     return DBSleepDiaryEntry(**{"user": user, **entry}).save()
 
@@ -99,6 +107,15 @@ def get_json_diary_entry(entry: dict) -> str:
         entry.pop(k, None)
     entry["sleep_efficiency"] = calculate_sleep_efficiency(entry)
     return json_dumps(entry)
+
+
+@set_attribute("return_direct", False)
+def save_sleep_diary_entry(memory: ReadOnlySharedMemory, *_):
+    """Saves the sleep diary entry to the database. Takes no arguments because
+    the entry is already in memory."""
+    entry = get_sleep_diary_entry_from_memory(memory)
+    print(f"save_sleep_diary_entry {entry=}")
+    save_sleep_diary_entry_to_db(get_current_user(), entry)
 
 
 @set_attribute("return_direct", False)
@@ -117,11 +134,8 @@ def get_date_sleep_diary_entry(
     memory: ReadOnlySharedMemory, goal: str, utterance: str, model_name=model_name
 ):
     """Returns the sleep diary entry for a given date."""
-    user = get_current_user()
     date = date_parser(utterance)
-    db_entry = DBSleepDiaryEntry.objects(
-        user=get_current_user(), date=date_parser(utterance)
-    ).first()
+    db_entry = DBSleepDiaryEntry.objects(user=get_current_user(), date=date).first()
     if db_entry is None:
         return f"No sleep diary entry found for {date.date()}"
     return get_json_diary_entry(db_entry.to_mongo().to_dict())
@@ -155,10 +169,9 @@ GOALS = [
     {
         "diary_entry": f"""
         Your goal is to record a sleep diary entry for a given night. First ask
-        if now is a good time to record a diary entry. Then guide them through
-        the following questions one at a time. Don't give all the questions at
-        once.  Wait for them to answer each question. If they've recorded a
-        diary entry previously, suggest using the same answer for the new entry.
+        if now is a good time to record a diary entry.  Then guide them through
+        the following questions one at a time.  Don't give all the questions at
+        once.  Wait for them to answer each question.
         
         - Date of entry (default to yesterday's date)
         - Time you went to bed 
@@ -174,7 +187,9 @@ GOALS = [
         - Any other notes you'd like to add
         
         End with a summary of the data you've collected and asking if it's
-        correct. {SLEEP_EFFICIENCY}
+        correct. It is critically important that you finish by saving the entry
+        to the database when the human has confirmed the data!
+        {SLEEP_EFFICIENCY}
     """,
     },
 ]
@@ -202,4 +217,5 @@ TOOLS = [
     get_sleep_diary_description,
     get_last_sleep_diary_entry,
     get_date_sleep_diary_entry,
+    save_sleep_diary_entry,
 ]

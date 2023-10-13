@@ -67,12 +67,10 @@ def get_template(goal: str, prompt: str) -> ChatPromptTemplate:
 
 
 @set_attribute("return_direct", False)
-def get_date(
-    memory: ReadOnlySharedMemory, goal: str, utterance: str, model_name=model_name
-):
+def get_date(*_):
     """Returns todays date, use this for any questions related to knowing
-    todays date. This function will always return todays date - any date
-    mathematics should occur outside this function."""
+    todays date. This function takes no arguments and will always return todays
+    date - any date mathematics should occur outside this function."""
     return str(date.today())
 
 
@@ -116,6 +114,7 @@ class X(object):
         self.audio = kwargs.pop("audio", False)
         self.display = kwargs.pop("display", True)
         self.hello = kwargs.pop("hello", True)
+        self.add_user = kwargs.pop("add_user", True)
         self.db_user = get_user_from_email(kwargs.pop("email", None))
         self.agent_executor = get_agent(*args, **kwargs)
         self.goal_accomplished = False
@@ -129,19 +128,17 @@ class X(object):
         self.goal_accomplished = goal_accomplished
 
     def add_user_to_memory(self) -> None:
-        self.agent_executor.memory.chat_memory.add_ai_message(
-            "what's your name and email?"
-        )
-        self.agent_executor.memory.chat_memory.add_user_message(
-            f"{self.db_user.name}, {self.db_user.email}"
-        )
+        self.agent_executor.memory.chat_memory.add_ai_message("what's your name?")
+        self.agent_executor.memory.chat_memory.add_user_message(self.db_user.name)
+        self.agent_executor.memory.chat_memory.add_ai_message("what's your email?")
+        self.agent_executor.memory.chat_memory.add_user_message(self.db_user.email)
 
-    def __call__(
-        self, utterance: str, save: bool = True, add_user: bool = True
-    ) -> bool:
+    def __call__(self, utterance: str, save: bool = True) -> bool:
         self.goal_accomplished = False
-        if add_user:
+        if self.add_user:
             self.add_user_to_memory()
+            self.add_user = False
+
         output = self.agent_executor.run(utterance, callbacks=[self.stop_handler])
         # print(output)
         if self.audio:
