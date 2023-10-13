@@ -57,16 +57,17 @@ def get_sleep_diary_entry_from_memory(memory: BaseMemory) -> SleepDiaryEntry:
     )
 
 
-def calculate_sleep_efficiency(data: dict) -> float:
+def calculate_sleep_efficiency(entry: dict) -> None:
     total_asleep = (
-        data["final_wake_up"] - data["tried_to_fall_asleep"]
+        entry["final_wake_up"] - entry["tried_to_fall_asleep"]
     ).total_seconds() / 60
-    total_asleep -= data["time_to_fall_asleep"]
-    total_asleep -= data["time_awake"]
+    total_asleep -= entry["time_to_fall_asleep"]
+    total_asleep -= entry["time_awake"]
 
-    total_in_bed = (data["out_of_bed"] - data["in_bed"]).total_seconds() / 60
+    total_in_bed = (entry["out_of_bed"] - entry["in_bed"]).total_seconds() / 60
 
-    return (total_asleep / total_in_bed) * 100
+    entry["sleep_duration"] = total_asleep
+    entry["sleep_efficiency"] = (total_asleep / total_in_bed) * 100
 
 
 def adjust_to_baseline_date(sleep_data: dict) -> dict:
@@ -95,24 +96,25 @@ def save_sleep_diary_entry_to_db(
     user: DBUser, entry: SleepDiaryEntry
 ) -> DBSleepDiaryEntry:
     entry = adjust_to_baseline_date(entry.dict())
+    # delete any existing entries for this date
+    DBSleepDiaryEntry.objects(user=user, date=entry["date"]).delete()
+    # save the new entry
     return DBSleepDiaryEntry(**{"user": user, **entry}).save()
 
 
-model_name = "gpt-4"
-
-
 def get_json_diary_entry(entry: dict) -> str:
-    """Returns the sleep diary entry in JSON format with sleep efficiency."""
+    """Returns the sleep diary entry in JSON format with sleep duration and
+    efficiency calculated."""
     for k in ("_id", "user"):
         entry.pop(k, None)
-    entry["sleep_efficiency"] = calculate_sleep_efficiency(entry)
+    calculate_sleep_efficiency(entry)
     return json_dumps(entry)
 
 
 @set_attribute("return_direct", False)
-def save_sleep_diary_entry(memory: ReadOnlySharedMemory, *_):
-    """Saves the sleep diary entry to the database. Takes no arguments because
-    the entry is already in memory."""
+def save_sleep_diary_entry(memory: ReadOnlySharedMemory, *_, **__):
+    """Saves the sleep diary entry to the database. Takes any number of
+    arguments but only uses memory. Assumes the entry is already in memory."""
     entry = get_sleep_diary_entry_from_memory(memory)
     print(f"save_sleep_diary_entry {entry=}")
     save_sleep_diary_entry_to_db(get_current_user(), entry)
@@ -126,6 +128,7 @@ def get_last_sleep_diary_entry(
     entry = (
         DBSleepDiaryEntry.objects(user=get_current_user()).first().to_mongo().to_dict()
     )
+    print(f"get_last_sleep_diary_entry {entry=}")
     return get_json_diary_entry(entry)
 
 
@@ -142,11 +145,12 @@ def get_date_sleep_diary_entry(
 
 
 SLEEP_EFFICIENCY = """
-Include sleep efficiency as a percentage. Sleep efficiency is the percentage of
-time spent asleep while in bed.
+Include sleep sleep duration in hours and minutes and efficiency as a
+percentage.
 
-To give the human a rough sense of how their sleep efficiency compares, tell
-them anything over 85%% is considered normal.
+Sleep efficiency is the percentage of time spent asleep while in bed. To give
+the human a rough sense of how their sleep efficiency compares, tell them
+anything over 85%% is considered normal.
 """
 
 GOALS = [
@@ -178,6 +182,7 @@ GOALS = [
         - Time you tried to fall asleep
         - How long it took you to fall asleep (in minutes)
         - How many times you woke up during the night (number)
+          - If zero then skip the next question, the answer is zero
         - Total time you were awake during the night (in minutes)
         - Final wake up time
         - Time you got out of bed
@@ -186,10 +191,9 @@ GOALS = [
         - Any medications or aids you used to help you sleep
         - Any other notes you'd like to add
         
-        End with a summary of the data you've collected and asking if it's
-        correct. It is critically important that you finish by saving the entry
-        to the database when the human has confirmed the data!
-        {SLEEP_EFFICIENCY}
+        It is critically important that you finish by saving the entry
+        to the database! Then retrieve the entry from the database and
+        summarise.  {SLEEP_EFFICIENCY}
     """,
     },
 ]
