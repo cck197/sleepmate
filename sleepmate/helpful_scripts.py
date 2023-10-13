@@ -25,6 +25,12 @@ def json_dumps(d: object) -> str:
     )
 
 
+def mongo_to_json(entry: dict) -> str:
+    for k in ("_id", "user"):
+        entry.pop(k, None)
+    return json_dumps(entry)
+
+
 def import_attrs(attr: str, dir: str = None) -> list:
     """Import all the attributes from all the .py files in dir. Return a list of
     all the attributes with the given name."""

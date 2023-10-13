@@ -6,7 +6,13 @@ from langchain.pydantic_v1 import BaseModel, Field, validator
 from langchain.schema import BaseMemory
 from mongoengine import ReferenceField
 
-from .helpful_scripts import fix_schema, get_date_fields, json_dumps, set_attribute
+from .helpful_scripts import (
+    fix_schema,
+    get_date_fields,
+    json_dumps,
+    mongo_to_json,
+    set_attribute,
+)
 from .mi import get_completion, get_template
 from .structured import get_parsed_output, pydantic_to_mongoengine
 from .user import DBUser, get_current_user
@@ -97,25 +103,20 @@ def save_sleep_diary_entry_to_db(
 def get_json_diary_entry(entry: dict) -> str:
     """Returns the sleep diary entry in JSON format with sleep duration and
     efficiency calculated."""
-    for k in ("_id", "user"):
-        entry.pop(k, None)
     calculate_sleep_efficiency(entry)
-    return json_dumps(entry)
+    return mongo_to_json(entry)
 
 
 @set_attribute("return_direct", False)
-def save_sleep_diary_entry(memory: ReadOnlySharedMemory, *_, **__):
-    """Saves the sleep diary entry to the database. Takes any number of
-    arguments but only uses memory. Assumes the entry is already in memory."""
+def save_sleep_diary_entry(memory: ReadOnlySharedMemory, goal: str, text: str):
+    """Saves the exercise entry to the database. Input should be strictly the empty string."""
     entry = get_sleep_diary_entry_from_memory(memory)
     print(f"save_sleep_diary_entry {entry=}")
     save_sleep_diary_entry_to_db(get_current_user(), entry)
 
 
 @set_attribute("return_direct", False)
-def get_sleep_diary_dates(
-    memory: ReadOnlySharedMemory, goal: str, utterance: str, model_name=model_name
-):
+def get_sleep_diary_dates(memory: ReadOnlySharedMemory, goal: str, utterance: str):
     """Returns the dates of all sleep diary entries in JSON format. Call with
     exactly one argument."""
     return json_dumps(
@@ -124,9 +125,7 @@ def get_sleep_diary_dates(
 
 
 @set_attribute("return_direct", False)
-def get_last_sleep_diary_entry(
-    memory: ReadOnlySharedMemory, goal: str, utterance: str, model_name=model_name
-):
+def get_last_sleep_diary_entry(memory: ReadOnlySharedMemory, goal: str, utterance: str):
     """Returns the last sleep diary entry."""
     entry = (
         DBSleepDiaryEntry.objects(user=get_current_user()).first().to_mongo().to_dict()
@@ -136,9 +135,7 @@ def get_last_sleep_diary_entry(
 
 
 @set_attribute("return_direct", False)
-def get_date_sleep_diary_entry(
-    memory: ReadOnlySharedMemory, goal: str, utterance: str, **__
-):
+def get_date_sleep_diary_entry(memory: ReadOnlySharedMemory, goal: str, utterance: str):
     """Returns the sleep diary entry for a given date."""
     date = date_parser(utterance)
     db_entry = DBSleepDiaryEntry.objects(user=get_current_user(), date=date).first()

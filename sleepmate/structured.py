@@ -2,6 +2,7 @@ from copy import deepcopy
 from datetime import datetime
 
 from langchain.chains import LLMChain
+from langchain.chat_models import ChatOpenAI
 from langchain.llms import OpenAI
 from langchain.memory import ReadOnlySharedMemory
 from langchain.output_parsers import PydanticOutputParser
@@ -20,9 +21,11 @@ from mongoengine import (
 # from langchain.chat_models import ChatOpenAI
 
 
-model_name = "text-davinci-003"
+# model_name = "text-davinci-003"
 # model_name = "gpt-3.5-turbo"
-# model_name = "gpt-4"
+model_name = "gpt-4"
+
+STRUCTURED_FORMAT_STRING = "Input should strictly be a single string."
 
 
 def get_parsed_output(query: str, memory: BaseMemory, cls: BaseModel) -> BaseModel:
@@ -35,10 +38,8 @@ def get_parsed_output(query: str, memory: BaseMemory, cls: BaseModel) -> BaseMod
         input_variables=["query", "chat_history"],
         partial_variables={"format_instructions": parser.get_format_instructions()},
     )
-    llm = OpenAI(model_name=model_name, temperature=0.0)
-    # llm = ChatOpenAI(model_name=model_name)
-    # memory = deepcopy(memory)
-    # memory.return_messages = False
+    # llm = OpenAI(model_name=model_name, temperature=0.0)
+    llm = ChatOpenAI(model_name=model_name, temperature=0.0)
     chain = LLMChain(llm=llm, prompt=prompt, memory=tail_memory(memory))
     output = chain({"query": query})
     return parser.parse(output["text"])
