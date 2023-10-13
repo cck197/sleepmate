@@ -6,7 +6,7 @@ from langchain.pydantic_v1 import BaseModel, Field, validator
 from langchain.schema import BaseMemory
 from mongoengine import ReferenceField
 
-from .helpful_scripts import json_dumps, set_attribute
+from .helpful_scripts import fix_schema, get_date_fields, json_dumps, set_attribute
 from .mi import get_completion, get_template
 from .structured import get_parsed_output, pydantic_to_mongoengine
 from .user import DBUser, get_current_user
@@ -30,21 +30,13 @@ class SleepDiaryEntry_(BaseModel):
     notes: str = Field(description="any other notes you'd like to add")
 
 
-date_fields = [
-    f.name for f in SleepDiaryEntry_.__fields__.values() if f.type_ == datetime
-]
+date_fields = get_date_fields(SleepDiaryEntry_)
 
 
 class SleepDiaryEntry(SleepDiaryEntry_):
     @classmethod
     def schema(cls):
-        s = SleepDiaryEntry_.schema()
-        for key in date_fields:
-            try:
-                del s["properties"][key]["format"]
-            except KeyError:
-                pass
-        return s
+        return fix_schema(SleepDiaryEntry_, date_fields)
 
     @validator(*date_fields, pre=True)
     def convert_date_to_datetime(cls, value):
@@ -134,7 +126,7 @@ def get_last_sleep_diary_entry(
 
 @set_attribute("return_direct", False)
 def get_date_sleep_diary_entry(
-    memory: ReadOnlySharedMemory, goal: str, utterance: str, model_name=model_name
+    memory: ReadOnlySharedMemory, goal: str, utterance: str, **__
 ):
     """Returns the sleep diary entry for a given date."""
     date = date_parser(utterance)

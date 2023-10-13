@@ -48,3 +48,17 @@ def flatten_list_of_dicts(dicts_list):
     for d in dicts_list:
         result.update(d)
     return result
+
+
+def get_date_fields(cls):
+    return [f.name for f in cls.__fields__.values() if f.type_ == datetime]
+
+
+def fix_schema(cls, date_fields):
+    s = cls.schema()
+    for key in date_fields:
+        try:
+            del s["properties"][key]["format"]
+        except KeyError:
+            pass
+    return s

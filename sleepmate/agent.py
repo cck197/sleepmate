@@ -66,19 +66,15 @@ def get_template(goal: str, prompt: str) -> ChatPromptTemplate:
     )
 
 
-@set_attribute("return_direct", False)
-def get_date(*_):
-    """Returns todays date, use this for any questions related to knowing
-    todays date. This function takes no arguments and will always return todays
-    date - any date mathematics should occur outside this function."""
+def get_date(word: str) -> date:
+    """Returns todays date, use this for any questions related to knowing todays
+    date. This function takes any arguments and will always return today's date
+    - any date mathematics should occur outside this function."""
     return str(date.today())
 
 
-TOOLS = [get_date]
-
-
 def get_tools(funcs, memory: ReadOnlySharedMemory, goal: str) -> list[Tool]:
-    return [
+    tools = [
         Tool.from_function(
             func=partial(f, memory, goal),
             name=f.__name__,
@@ -87,6 +83,15 @@ def get_tools(funcs, memory: ReadOnlySharedMemory, goal: str) -> list[Tool]:
         )
         for f in funcs
     ]
+    tools.extend(
+        [
+            Tool(name=t.__name__, func=t, description=t.__doc__, return_direct=False)
+            for t in [
+                get_date,
+            ]
+        ]
+    )
+    return tools
 
 
 def get_goals() -> list[dict]:
