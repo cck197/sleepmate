@@ -10,7 +10,7 @@ packages = [{include = "sleepmate"}]
 python = "^3.11"
 pytest-bdd = "^6.1.1"
 openai = "^0.28.1"
-langchain = "^0.0.311"
+langchain = "^0.0.314"
 jupyterlab = "^4.0.6"
 chromadb = "^0.4.13"
 tiktoken = "^0.5.1"

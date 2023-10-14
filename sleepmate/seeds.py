@@ -24,6 +24,9 @@ model_name = "gpt-4"
 # memory. Not normalised but meh. It's too hard to translate between the chat
 # history (Pydantic) and the database (Mongoengine).
 
+# TODO detect and reject goals, e.g. bench press 100kg, run 5km, etc.
+# TODO Traffic Light segmentation and prioritisation.
+
 
 class SeedPod(BaseModel):
     """A list of tasks"""
@@ -88,6 +91,42 @@ DBSeeds = pydantic_to_mongoengine(
     Seeds, extra_fields={"pod": ReferenceField(DBSeedPod, required=True)}
 )
 
+
+def get_seed_pod_from_memory(memory: BaseMemory) -> SeedPod:
+    return get_parsed_output("summarise the SEEDS", memory, SeedPod)
+
+
+def save_seed_pod_to_db(user: DBUser, entry: SeedPod) -> DBSeedPod:
+    return DBSeedPod(**{"user": user, **entry.dict()}).save()
+
+
+def get_json_seed_pod(entry: dict) -> str:
+    """Returns the SEEDS in JSON format"""
+    return mongo_to_json(entry)
+
+
+@set_attribute("return_direct", False)
+def save_seed_pod(memory: ReadOnlySharedMemory, goal: str, text: str):
+    """Saves SEEDS to the database. Call with exactly one string argument."""
+    entry = get_seed_pod_from_memory(memory)
+    print(f"save_seed_pod {entry=}")
+    save_seed_pod_to_db(get_current_user(), entry)
+
+
+@set_attribute("return_direct", False)
+def get_seed_pod(memory: ReadOnlySharedMemory, goal: str, utterance: str):
+    """Returns SEEDS from the database. Call with exactly one string argument."""
+    entry = (
+        DBSeedPod.objects(user=get_current_user())
+        .order_by("-id")
+        .first()
+        .to_mongo()
+        .to_dict()
+    )
+    print(f"get_seeds {entry=}")
+    return get_json_seed_pod(entry)
+
+
 GOALS = [
     {
         "seeds_probe": """
@@ -150,8 +189,9 @@ GOALS = [
 
         Collect the SEEDS from the human one category at a time. 
 
-        Finish by giving a summary of the SEEDS they defined for each category and
-        asking if they're correct.
+        Finish by giving a summary of the SEEDS they defined for each category
+        and asking if they're correct. Only after they've confirmed, save the
+        SEEDS to the database.
         """,
     },
     {
@@ -165,3 +205,5 @@ GOALS = [
         """,
     },
 ]
+
+TOOLS = [get_seed_pod, save_seed_pod]
