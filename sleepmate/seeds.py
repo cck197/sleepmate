@@ -1,3 +1,93 @@
+from datetime import datetime, timedelta
+from typing import List
+
+from dateutil.parser import parse as date_parser
+from langchain.memory import ReadOnlySharedMemory
+from langchain.pydantic_v1 import BaseModel, Field, validator
+from langchain.schema import BaseMemory
+from mongoengine import ReferenceField
+
+from .helpful_scripts import (
+    fix_schema,
+    get_date_fields,
+    json_dumps,
+    mongo_to_json,
+    set_attribute,
+)
+from .mi import get_completion, get_template
+from .structured import get_parsed_output, pydantic_to_mongoengine
+from .user import DBUser, get_current_user
+
+model_name = "gpt-4"
+
+# Super simple schema optimised for marshalling in and out of the chat history
+# memory. Not normalised but meh. It's too hard to translate between the chat
+# history (Pydantic) and the database (Mongoengine).
+
+
+class SeedPod(BaseModel):
+    """A list of tasks"""
+
+    sleep_1: str = Field(description="sleep 1", default="")
+    sleep_2: str = Field(description="sleep 2", default="")
+    sleep_3: str = Field(description="sleep 3", default="")
+    exercise_1: str = Field(description="exercise 1", default="")
+    exercise_2: str = Field(description="exercise 2", default="")
+    exercise_3: str = Field(description="exercise 3", default="")
+    eating_1: str = Field(description="eating 1", default="")
+    eating_2: str = Field(description="eating 2", default="")
+    eating_3: str = Field(description="eating 3", default="")
+    drinking_1: str = Field(description="drinking 1", default="")
+    drinking_2: str = Field(description="drinking 2", default="")
+    drinking_3: str = Field(description="drinking 3", default="")
+    stress_1: str = Field(description="stress 1", default="")
+    stress_2: str = Field(description="stress 2", default="")
+    stress_3: str = Field(description="stress 3", default="")
+
+
+DBSeedPod = pydantic_to_mongoengine(
+    SeedPod, extra_fields={"user": ReferenceField(DBUser, required=True)}
+)
+
+
+class Seeds_(BaseModel):
+    """A list of completed tasks"""
+
+    date: datetime = Field(description="date of entry", default=0)
+    sleep_1: int = Field(description="Sleep 1", default=0)
+    sleep_2: int = Field(description="Sleep 2", default=0)
+    sleep_3: int = Field(description="Sleep 3", default=0)
+    exercise_1: int = Field(description="exercise 1", default=0)
+    exercise_2: int = Field(description="exercise 2", default=0)
+    exercise_3: int = Field(description="exercise 3", default=0)
+    eating_1: int = Field(description="eating 1", default=0)
+    eating_2: int = Field(description="eating 2", default=0)
+    eating_3: int = Field(description="eating 3", default=0)
+    drinking_1: int = Field(description="drinking 1", default=0)
+    drinking_2: int = Field(description="drinking 2", default=0)
+    drinking_3: int = Field(description="drinking 3", default=0)
+    stress_1: int = Field(description="stress 1", default=0)
+    stress_2: int = Field(description="stress 2", default=0)
+    stress_3: int = Field(description="stress 3", default=0)
+
+
+date_fields = get_date_fields(Seeds_)
+
+
+class Seeds(Seeds_):
+    @classmethod
+    def schema(cls):
+        return fix_schema(Seeds_, date_fields)
+
+    @validator(*date_fields, pre=True)
+    def convert_date_to_datetime(cls, value):
+        return date_parser(value)
+
+
+DBSeeds = pydantic_to_mongoengine(
+    Seeds, extra_fields={"pod": ReferenceField(DBSeedPod, required=True)}
+)
+
 GOALS = [
     {
         "seeds_probe": """
