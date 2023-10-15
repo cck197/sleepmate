@@ -27,6 +27,10 @@ model_name = "gpt-4"
 # TODO detect and reject goals, e.g. bench press 100kg, run 5km, etc.
 # TODO Traffic Light segmentation and prioritisation.
 
+######################################################################
+# SeedPod (set of predefined SEEDS tasks)
+######################################################################
+
 
 class SeedPod(BaseModel):
     """A list of tasks"""
@@ -53,45 +57,6 @@ DBSeedPod = pydantic_to_mongoengine(
 )
 
 
-class Seeds_(BaseModel):
-    """A list of completed tasks"""
-
-    date: datetime = Field(description="date of entry", default=0)
-    sleep_1: int = Field(description="Sleep 1", default=0)
-    sleep_2: int = Field(description="Sleep 2", default=0)
-    sleep_3: int = Field(description="Sleep 3", default=0)
-    exercise_1: int = Field(description="exercise 1", default=0)
-    exercise_2: int = Field(description="exercise 2", default=0)
-    exercise_3: int = Field(description="exercise 3", default=0)
-    eating_1: int = Field(description="eating 1", default=0)
-    eating_2: int = Field(description="eating 2", default=0)
-    eating_3: int = Field(description="eating 3", default=0)
-    drinking_1: int = Field(description="drinking 1", default=0)
-    drinking_2: int = Field(description="drinking 2", default=0)
-    drinking_3: int = Field(description="drinking 3", default=0)
-    stress_1: int = Field(description="stress 1", default=0)
-    stress_2: int = Field(description="stress 2", default=0)
-    stress_3: int = Field(description="stress 3", default=0)
-
-
-date_fields = get_date_fields(Seeds_)
-
-
-class Seeds(Seeds_):
-    @classmethod
-    def schema(cls):
-        return fix_schema(Seeds_, date_fields)
-
-    @validator(*date_fields, pre=True)
-    def convert_date_to_datetime(cls, value):
-        return date_parser(value)
-
-
-DBSeeds = pydantic_to_mongoengine(
-    Seeds, extra_fields={"pod": ReferenceField(DBSeedPod, required=True)}
-)
-
-
 def get_seed_pod_from_memory(memory: BaseMemory) -> SeedPod:
     return get_parsed_output("summarise the SEEDS", memory, SeedPod)
 
@@ -113,18 +78,100 @@ def save_seed_pod(memory: ReadOnlySharedMemory, goal: str, text: str):
     save_seed_pod_to_db(get_current_user(), entry)
 
 
+def get_current_seed_pod() -> DBSeedPod:
+    """Returns current SEEDS."""
+    return DBSeedPod.objects(user=get_current_user()).order_by("-id").first()
+
+
 @set_attribute("return_direct", False)
 def get_seed_pod(memory: ReadOnlySharedMemory, goal: str, utterance: str):
-    """Returns SEEDS from the database. Call with exactly one string argument."""
-    entry = (
-        DBSeedPod.objects(user=get_current_user())
-        .order_by("-id")
-        .first()
-        .to_mongo()
-        .to_dict()
-    )
+    """Returns predefined SEEDS tasks from the database. Call with exactly one
+    string argument."""
+    entry = get_current_seed_pod()
+    print(f"get_seed_pod {entry=}")
+    if entry is not None:
+        return get_json_seed_pod(entry.to_mongo().to_dict())
+
+
+######################################################################
+# SeedsDiaryEntry (a completed set of SEEDS tasks diary entry)
+######################################################################
+
+
+class SeedsDiaryEntry_(BaseModel):
+    """A list of completed tasks"""
+
+    date: datetime = Field(description="date of entry", default=0)
+    sleep_1: int = Field(description="Sleep 1", default=0)
+    sleep_2: int = Field(description="Sleep 2", default=0)
+    sleep_3: int = Field(description="Sleep 3", default=0)
+    exercise_1: int = Field(description="exercise 1", default=0)
+    exercise_2: int = Field(description="exercise 2", default=0)
+    exercise_3: int = Field(description="exercise 3", default=0)
+    eating_1: int = Field(description="eating 1", default=0)
+    eating_2: int = Field(description="eating 2", default=0)
+    eating_3: int = Field(description="eating 3", default=0)
+    drinking_1: int = Field(description="drinking 1", default=0)
+    drinking_2: int = Field(description="drinking 2", default=0)
+    drinking_3: int = Field(description="drinking 3", default=0)
+    stress_1: int = Field(description="stress 1", default=0)
+    stress_2: int = Field(description="stress 2", default=0)
+    stress_3: int = Field(description="stress 3", default=0)
+
+
+date_fields = get_date_fields(SeedsDiaryEntry_)
+
+
+class SeedsDiaryEntry(SeedsDiaryEntry_):
+    @classmethod
+    def schema(cls):
+        return fix_schema(SeedsDiaryEntry_, date_fields)
+
+    @validator(*date_fields, pre=True)
+    def convert_date_to_datetime(cls, value):
+        return date_parser(value)
+
+
+DBSeedsDiaryEntry = pydantic_to_mongoengine(
+    SeedsDiaryEntry, extra_fields={"pod": ReferenceField(DBSeedPod, required=True)}
+)
+
+
+def get_seeds_from_memory(memory: BaseMemory) -> SeedsDiaryEntry:
+    return get_parsed_output("summarise the SEEDS diary entry", memory, SeedsDiaryEntry)
+
+
+def save_seeds_to_db(pod, DBSeedPod, entry: SeedsDiaryEntry) -> DBSeedPod:
+    return DBSeedPod(**{"pod": pod, **entry.dict()}).save()
+
+
+def get_json_seeds(entry: dict) -> str:
+    """Returns the SEEDS diary entry in JSON format"""
+    return mongo_to_json(entry)
+
+
+@set_attribute("return_direct", False)
+def save_seeds_diary_entry(memory: ReadOnlySharedMemory, goal: str, text: str):
+    """Saves a SEEDS diary entry to the database. Call with exactly one string
+    argument."""
+    entry = get_seeds_from_memory(memory)
+    print(f"save_seeds {entry=}")
+    save_seeds_to_db(get_current_seed_pod(), entry)
+
+
+def get_current_seeds() -> DBSeedsDiaryEntry:
+    """Returns the last SEEDS diary entry."""
+    return DBSeedsDiaryEntry.objects(pod=get_current_seed_pod()).order_by("-id").first()
+
+
+@set_attribute("return_direct", False)
+def get_seeds_diary_entry(memory: ReadOnlySharedMemory, goal: str, utterance: str):
+    """Returns SEEDS diary entry from the database. Call with exactly one string
+    argument."""
+    entry = get_current_seeds()
     print(f"get_seeds {entry=}")
-    return get_json_seed_pod(entry)
+    if entry is not None:
+        return get_json_seeds(entry.to_mongo().to_dict())
 
 
 GOALS = [
@@ -200,10 +247,12 @@ GOALS = [
         First, ask if now is a good time to record a SEEDS diary entry.
         Summarise the SEEDS they gave earlier. Ask what date the entry is for,
         suggest today as a default. Then, for each SEED in each pillar, ask what
-        they got done today. Then summarise and ask if it's correct. Finish by
-        giving a score (/15) for how many they managed to do that day.
+        they got done today. Then summarise and ask if it's correct. Give them a
+        score (/15) for how many they managed to do that day.
+
+        Only after they've confirmed, save the SEEDS diary entry to the database.
         """,
     },
 ]
 
-TOOLS = [get_seed_pod, save_seed_pod]
+TOOLS = [get_seed_pod, save_seed_pod, get_seeds_diary_entry, save_seeds_diary_entry]
