@@ -141,8 +141,10 @@ def get_seeds_from_memory(memory: BaseMemory) -> SeedsDiaryEntry:
     return get_parsed_output("summarise the SEEDS diary entry", memory, SeedsDiaryEntry)
 
 
-def save_seeds_to_db(pod, DBSeedPod, entry: SeedsDiaryEntry) -> DBSeedPod:
-    return DBSeedPod(**{"pod": pod, **entry.dict()}).save()
+def save_seeds_diary_entry_to_db(
+    pod: DBSeedPod, entry: SeedsDiaryEntry
+) -> DBSeedsDiaryEntry:
+    return DBSeedsDiaryEntry(**{"pod": pod, **entry.dict()}).save()
 
 
 def get_json_seeds(entry: dict) -> str:
@@ -152,11 +154,11 @@ def get_json_seeds(entry: dict) -> str:
 
 @set_attribute("return_direct", False)
 def save_seeds_diary_entry(memory: ReadOnlySharedMemory, goal: str, text: str):
-    """Saves a SEEDS diary entry to the database. Call with exactly one string
-    argument."""
+    """Saves a SEEDS diary entry to the database. Important: call with exactly
+    one string argument."""
     entry = get_seeds_from_memory(memory)
     print(f"save_seeds {entry=}")
-    save_seeds_to_db(get_current_seed_pod(), entry)
+    save_seeds_diary_entry_to_db(get_current_seed_pod(), entry)
 
 
 def get_current_seeds() -> DBSeedsDiaryEntry:
@@ -166,12 +168,14 @@ def get_current_seeds() -> DBSeedsDiaryEntry:
 
 @set_attribute("return_direct", False)
 def get_seeds_diary_entry(memory: ReadOnlySharedMemory, goal: str, utterance: str):
-    """Returns SEEDS diary entry from the database. Call with exactly one string
-    argument."""
-    entry = get_current_seeds()
-    print(f"get_seeds {entry=}")
-    if entry is not None:
-        return get_json_seeds(entry.to_mongo().to_dict())
+    """Returns SEEDS diary entry from the database. Important: call with exactly
+    one string argument."""
+    db_entry = get_current_seeds()
+    print(f"get_seeds_diary_entry {db_entry=}")
+    if db_entry is not None:
+        entry = db_entry.to_mongo().to_dict()
+        entry["pod"] = get_json_seed_pod(db_entry.pod.to_mongo().to_dict())
+        return get_json_seeds(entry)
 
 
 GOALS = [
@@ -246,9 +250,10 @@ GOALS = [
         Your goals to ask the human about what SEEDS they managed to do today.
         First, ask if now is a good time to record a SEEDS diary entry.
         Summarise the SEEDS they gave earlier. Ask what date the entry is for,
-        suggest today as a default. Then, for each SEED in each pillar, ask what
-        they got done today. Then summarise and ask if it's correct. Give them a
-        score (/15) for how many they managed to do that day.
+        get today's date and suggest that as a default. Then, for each SEED in
+        each pillar, ask what they got done today. Then summarise and ask if
+        it's correct. Give them a score (/15) for how many they managed to do
+        that day.
 
         Only after they've confirmed, save the SEEDS diary entry to the database.
         """,
