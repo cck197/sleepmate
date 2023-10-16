@@ -1,5 +1,4 @@
-from datetime import datetime, timedelta
-from typing import List
+from datetime import datetime
 
 from dateutil.parser import parse as date_parser
 from langchain.memory import ReadOnlySharedMemory
@@ -7,18 +6,14 @@ from langchain.pydantic_v1 import BaseModel, Field, validator
 from langchain.schema import BaseMemory
 from mongoengine import ReferenceField
 
-from .helpful_scripts import (
+from .helpful_scripts import get_date_fields, mongo_to_json, set_attribute
+from .structured import (
+    create_from_positional_args,
     fix_schema,
-    get_date_fields,
-    json_dumps,
-    mongo_to_json,
-    set_attribute,
+    get_parsed_output,
+    pydantic_to_mongoengine,
 )
-from .mi import get_completion, get_template
-from .structured import get_parsed_output, pydantic_to_mongoengine
 from .user import DBUser, get_current_user
-
-model_name = "gpt-4"
 
 # Super simple schema optimised for marshalling in and out of the chat history
 # memory. Not normalised but meh. It's too hard to translate between the chat
@@ -73,7 +68,9 @@ def get_json_seed_pod(entry: dict) -> str:
 @set_attribute("return_direct", False)
 def save_seed_pod(memory: ReadOnlySharedMemory, goal: str, text: str):
     """Saves SEEDS to the database. Call with exactly one string argument."""
-    entry = get_seed_pod_from_memory(memory)
+    entry = create_from_positional_args(SeedPod, text)
+    if entry is None:
+        entry = get_seed_pod_from_memory(memory)
     print(f"save_seed_pod {entry=}")
     save_seed_pod_to_db(get_current_user(), entry)
 
@@ -156,7 +153,9 @@ def get_json_seeds(entry: dict) -> str:
 def save_seeds_diary_entry(memory: ReadOnlySharedMemory, goal: str, text: str):
     """Saves a SEEDS diary entry to the database. Important: call with exactly
     one string argument."""
-    entry = get_seeds_from_memory(memory)
+    entry = create_from_positional_args(SeedsDiaryEntry, text)
+    if entry is None:
+        entry = get_seeds_from_memory(memory)
     print(f"save_seeds {entry=}")
     save_seeds_diary_entry_to_db(get_current_seed_pod(), entry)
 

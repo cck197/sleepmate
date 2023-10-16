@@ -1,19 +1,18 @@
 from datetime import datetime
 
-from dateutil.parser import parse as date_parser
 from langchain.memory import ReadOnlySharedMemory
 from langchain.pydantic_v1 import BaseModel, Field, validator
 from langchain.schema import BaseMemory
 from mongoengine import ReferenceField
 
 from .helpful_scripts import (
-    fix_schema,
     get_date_fields,
     json_dumps,
     mongo_to_json,
+    parse_date,
     set_attribute,
 )
-from .structured import get_parsed_output, pydantic_to_mongoengine
+from .structured import fix_schema, get_parsed_output, pydantic_to_mongoengine
 from .user import DBUser, get_current_user
 
 
@@ -40,7 +39,7 @@ class ISIEntry(ISIEntry_):
 
     @validator(*date_fields, pre=True)
     def convert_date_to_datetime(cls, value):
-        return date_parser(value)
+        return parse_date(value, default_days=0)
 
 
 DBISIEntry = pydantic_to_mongoengine(
@@ -87,7 +86,7 @@ def get_last_isi_entry(memory: ReadOnlySharedMemory, goal: str, utterance: str):
 @set_attribute("return_direct", False)
 def get_date_isi_diary_entry(memory: ReadOnlySharedMemory, goal: str, utterance: str):
     """Returns the Insomnia Severity Index entry for a given date."""
-    date = date_parser(utterance)
+    date = parse_date(utterance)
     db_entry = DBISIEntry.objects(user=get_current_user(), date=date).first()
     if db_entry is None:
         return f"No ISI entry found for {date.date()}"

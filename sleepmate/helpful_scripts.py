@@ -1,8 +1,10 @@
 import importlib
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
+from dateutil.parser import ParserError
+from dateutil.parser import parse as date_parser
 from IPython.display import Markdown, display
 
 
@@ -56,15 +58,22 @@ def flatten_list_of_dicts(dicts_list):
     return result
 
 
+def flatten_list(lst):
+    return [
+        item
+        for sublist in lst
+        for item in (sublist if isinstance(sublist, list) else [sublist])
+    ]
+
+
 def get_date_fields(cls):
     return [f.name for f in cls.__fields__.values() if f.type_ == datetime]
 
 
-def fix_schema(cls, date_fields):
-    s = cls.schema()
-    for key in date_fields:
-        try:
-            del s["properties"][key]["format"]
-        except KeyError:
-            pass
-    return s
+def parse_date(date: str, default_days=0) -> datetime:
+    """Parse a date string."""
+    try:
+        # print(f"parse_date {date=}")
+        return date_parser(date)
+    except ParserError:
+        return datetime.now() - timedelta(days=default_days)

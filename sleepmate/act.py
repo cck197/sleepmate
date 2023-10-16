@@ -7,14 +7,8 @@ from langchain.pydantic_v1 import BaseModel, Field, validator
 from langchain.schema import BaseMemory
 from mongoengine import ReferenceField
 
-from .helpful_scripts import (
-    fix_schema,
-    get_date_fields,
-    json_dumps,
-    mongo_to_json,
-    set_attribute,
-)
-from .structured import get_parsed_output, pydantic_to_mongoengine
+from .helpful_scripts import get_date_fields, json_dumps, mongo_to_json, set_attribute
+from .structured import fix_schema, get_parsed_output, pydantic_to_mongoengine
 from .user import DBUser, get_current_user
 
 ######################################################################

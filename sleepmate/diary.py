@@ -1,20 +1,24 @@
 from datetime import datetime, timedelta
 
-from dateutil.parser import parse as date_parser
 from langchain.memory import ReadOnlySharedMemory
 from langchain.pydantic_v1 import BaseModel, Field, validator
 from langchain.schema import BaseMemory
 from mongoengine import ReferenceField
 
 from .helpful_scripts import (
-    fix_schema,
     get_date_fields,
     json_dumps,
     mongo_to_json,
+    parse_date,
     set_attribute,
 )
 from .mi import get_completion, get_template
-from .structured import get_parsed_output, pydantic_to_mongoengine
+from .structured import (
+    create_from_positional_args,
+    fix_schema,
+    get_parsed_output,
+    pydantic_to_mongoengine,
+)
 from .user import DBUser, get_current_user
 
 model_name = "gpt-4"
@@ -46,7 +50,7 @@ class SleepDiaryEntry(SleepDiaryEntry_):
 
     @validator(*date_fields, pre=True)
     def convert_date_to_datetime(cls, value):
-        return date_parser(value)
+        return parse_date(value, default_days=1)
 
 
 def get_sleep_diary_entry_from_memory(memory: BaseMemory) -> SleepDiaryEntry:
@@ -109,8 +113,11 @@ def get_json_diary_entry(entry: dict) -> str:
 
 @set_attribute("return_direct", False)
 def save_sleep_diary_entry(memory: ReadOnlySharedMemory, goal: str, text: str):
-    """Saves the exercise entry to the database. Input should be strictly the empty string."""
-    entry = get_sleep_diary_entry_from_memory(memory)
+    """Saves the exercise entry to the database. Important: call with exactly
+    one string argument."""
+    entry = create_from_positional_args(SleepDiaryEntry, text)
+    if entry is None:
+        entry = get_sleep_diary_entry_from_memory(memory)
     print(f"save_sleep_diary_entry {entry=}")
     save_sleep_diary_entry_to_db(get_current_user(), entry)
 
@@ -118,7 +125,7 @@ def save_sleep_diary_entry(memory: ReadOnlySharedMemory, goal: str, text: str):
 @set_attribute("return_direct", False)
 def get_sleep_diary_dates(memory: ReadOnlySharedMemory, goal: str, utterance: str):
     """Returns the dates of all sleep diary entries in JSON format. Call with
-    exactly one argument."""
+    exactly one string argument."""
     return json_dumps(
         [e.date for e in DBSleepDiaryEntry.objects(user=get_current_user())]
     )
@@ -127,9 +134,10 @@ def get_sleep_diary_dates(memory: ReadOnlySharedMemory, goal: str, utterance: st
 @set_attribute("return_direct", False)
 def get_last_sleep_diary_entry(memory: ReadOnlySharedMemory, goal: str, utterance: str):
     """Returns the last sleep diary entry."""
-    entry = (
-        DBSleepDiaryEntry.objects(user=get_current_user()).first().to_mongo().to_dict()
-    )
+    db_entry = DBSleepDiaryEntry.objects(user=get_current_user()).first()
+    if db_entry is None:
+        return "No sleep diary entries found"
+    entry = db_entry.to_mongo().to_dict()
     print(f"get_last_sleep_diary_entry {entry=}")
     return get_json_diary_entry(entry)
 
@@ -137,7 +145,7 @@ def get_last_sleep_diary_entry(memory: ReadOnlySharedMemory, goal: str, utteranc
 @set_attribute("return_direct", False)
 def get_date_sleep_diary_entry(memory: ReadOnlySharedMemory, goal: str, utterance: str):
     """Returns the sleep diary entry for a given date."""
-    date = date_parser(utterance)
+    date = parse_date(utterance)
     db_entry = DBSleepDiaryEntry.objects(user=get_current_user(), date=date).first()
     if db_entry is None:
         return f"No sleep diary entry found for {date.date()}"
@@ -191,8 +199,13 @@ GOALS = [
         - Any medications or aids you used to help you sleep
         - Any other notes you'd like to add
         
-        It is critically important that you finish by saving the entry
-        to the database! Then retrieve the entry from the database and
+        Once you have all the answers to the above, STOP! Summarise the results
+        in a bullet list and ask if they're correct.
+
+        Important: don't save the entry until the human has confirmed! Then save
+        the diary entry to the database.
+        
+        Finally, retrieve the entry from the database and
         summarise.  {SLEEP_EFFICIENCY}
     """,
     },
@@ -203,7 +216,7 @@ def get_sleep_diary_description(
     memory: ReadOnlySharedMemory, goal: str, utterance: str, model_name=model_name
 ) -> str:
     """Use this when the human asks what a sleep diary is. Summarise the
-    numbered list of questions only:"""
+    numbered list of questions only. Call with exactly one string argument."""
     return get_completion(
         memory,
         utterance,

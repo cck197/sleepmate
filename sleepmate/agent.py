@@ -3,7 +3,7 @@ import pickle
 from datetime import date
 from functools import partial
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict, Tuple, Union
 
 from langchain.agents import AgentExecutor, OpenAIFunctionsAgent
 from langchain.callbacks.base import BaseCallbackHandler
@@ -16,11 +16,16 @@ from langchain.prompts import (
     SystemMessagePromptTemplate,
 )
 from langchain.schema import AgentAction
-from langchain.tools import Tool
+from langchain.tools import BaseTool, Tool
 
 from .audio import play
 from .db import *
-from .helpful_scripts import display_markdown, flatten_list_of_dicts, import_attrs
+from .helpful_scripts import (
+    display_markdown,
+    flatten_list_of_dicts,
+    import_attrs,
+    json_dumps,
+)
 from .meta import MetaX
 from .user import get_user_from_email
 
@@ -61,16 +66,31 @@ def get_template(goal: str, prompt: str) -> ChatPromptTemplate:
     )
 
 
-def get_date(word: str) -> date:
+def get_date(*args, **kwargs) -> date:
     """Returns todays date, use this for any questions related to knowing todays
     date. This function takes any arguments and will always return today's date
     - any date mathematics should occur outside this function."""
     return str(date.today())
 
 
+class CustomTool(Tool):
+    def _to_args_and_kwargs(self, tool_input: Union[str, Dict]) -> Tuple[Tuple, Dict]:
+        """Convert tool input to pydantic model."""
+        args, kwargs = BaseTool._to_args_and_kwargs(self, tool_input)
+        # For backwards compatibility. The tool must be run with a single input
+        all_args = list(args) + list(kwargs.values())
+        if len(all_args) > 1:
+            all_args = [json_dumps(all_args)]
+        # import pdb
+
+        # pdb.set_trace()
+        print(f"_to_args_and_kwargs {self.name=} {all_args=}")
+        return tuple(all_args), {}
+
+
 def get_tools(funcs, memory: ReadOnlySharedMemory, goal: str) -> list[Tool]:
     tools = [
-        Tool.from_function(
+        CustomTool.from_function(
             func=partial(f, memory, goal),
             name=f.__name__,
             description=f.__doc__,
@@ -80,7 +100,9 @@ def get_tools(funcs, memory: ReadOnlySharedMemory, goal: str) -> list[Tool]:
     ]
     tools.extend(
         [
-            Tool(name=t.__name__, func=t, description=t.__doc__, return_direct=False)
+            CustomTool(
+                name=t.__name__, func=t, description=t.__doc__, return_direct=False
+            )
             for t in [
                 get_date,
             ]
@@ -157,7 +179,7 @@ class X(object):
     @staticmethod
     def load_memory(
         filename: str = SLEEPMATE_MEMORY_PATH,
-        k: int = 50,
+        k: int = 30,
         memory_key: str = "chat_history",
     ) -> ConversationBufferWindowMemory:
         if Path(filename).exists():

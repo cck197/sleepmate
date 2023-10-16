@@ -1,3 +1,79 @@
+from datetime import datetime
+from typing import List
+
+from langchain.memory import ReadOnlySharedMemory
+from langchain.pydantic_v1 import BaseModel, Field, validator
+from langchain.schema import BaseMemory
+from mongoengine import ReferenceField
+
+from .helpful_scripts import get_date_fields, mongo_to_json, set_attribute
+from .structured import fix_schema, get_parsed_output, pydantic_to_mongoengine
+from .user import DBUser, get_current_user
+
+######################################################################
+# StressAudit - a record of a stress audit
+######################################################################
+
+
+class StressAudit_(BaseModel):
+    date: datetime = Field(description="date of entry")
+    behaviours: List[str] = Field(description="behaviours")
+
+
+date_fields = get_date_fields(StressAudit_)
+
+
+class StressAudit(StressAudit_):
+    @classmethod
+    def schema(cls):
+        return fix_schema(StressAudit_, date_fields)
+
+    @validator(*date_fields, pre=True)
+    def convert_date_to_datetime(cls, _):
+        return datetime.now()
+
+
+DBStressAudit = pydantic_to_mongoengine(
+    StressAudit, extra_fields={"user": ReferenceField(DBUser, required=True)}
+)
+
+
+def get_stress_audit_from_memory(memory: BaseMemory) -> StressAudit:
+    return get_parsed_output("summarise the stress audit", memory, StressAudit)
+
+
+def save_stress_audit_to_db(user: DBUser, entry: StressAudit) -> DBStressAudit:
+    return DBStressAudit(**{"user": user, **entry.dict()}).save()
+
+
+def get_json_stress_audit(entry: dict) -> str:
+    """Returns the Stress Audit in JSON format"""
+    return mongo_to_json(entry)
+
+
+@set_attribute("return_direct", False)
+def save_stress_audit(memory: ReadOnlySharedMemory, goal: str, text: str):
+    """Saves Stress Audit to the database. Call with exactly one string argument."""
+    entry = get_stress_audit_from_memory(memory)
+    print(f"save_stress_audit {entry=}")
+    save_stress_audit_to_db(get_current_user(), entry)
+
+
+def get_current_stress_audit() -> DBStressAudit:
+    """Returns current Stress Audit."""
+    return DBStressAudit.objects(user=get_current_user()).order_by("-id").first()
+
+
+@set_attribute("return_direct", False)
+def get_stress_audit(memory: ReadOnlySharedMemory, goal: str, utterance: str):
+    """Returns Stress Audit from the database. Call with exactly one string
+    argument."""
+    entry = get_current_stress_audit()
+    print(f"get_stress_audit {entry=}")
+    if entry is not None:
+        return get_json_stress_audit(entry.to_mongo().to_dict())
+
+
 GOALS = [
     {
         "stress_audit": """
@@ -83,6 +159,10 @@ GOALS = [
 
         If there's an imbalance in the list, ask if they can think of anything
         that might help balance the list. Give examples. 
+        
+        Only after they've confirmed, save the Stress Audit to the database.
         """
     }
 ]
+
+TOOLS = [get_stress_audit, save_stress_audit]
