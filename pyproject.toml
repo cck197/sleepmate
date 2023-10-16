@@ -8,7 +8,6 @@ packages = [{include = "sleepmate"}]
 
 [tool.poetry.dependencies]
 python = "^3.11"
-pytest-bdd = "^6.1.1"
 openai = "^0.28.1"
 langchain = "^0.0.314"
 jupyterlab = "^4.0.7"
