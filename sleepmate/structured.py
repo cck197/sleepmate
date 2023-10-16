@@ -1,5 +1,6 @@
 from copy import deepcopy
 from datetime import datetime
+from typing import Tuple
 
 from langchain.chains import LLMChain
 from langchain.chat_models import ChatOpenAI
@@ -15,8 +16,10 @@ from mongoengine import (
     Document,
     FloatField,
     IntField,
+    ListField,
     StringField,
 )
+from mongoengine.errors import ValidationError
 
 # from langchain.chat_models import ChatOpenAI
 
@@ -52,6 +55,11 @@ def tail_memory(memory: ReadOnlySharedMemory, n: int = 20) -> ReadOnlySharedMemo
     return memory_
 
 
+def validate_coordinates(value):
+    if len(value) != 2:
+        raise ValidationError("Coordinates must have exactly 2 elements")
+
+
 def pydantic_to_mongoengine(pydantic_model, extra_fields=None):
     fields = {}
     type_map = {
@@ -60,6 +68,9 @@ def pydantic_to_mongoengine(pydantic_model, extra_fields=None):
         float: FloatField,
         bool: BooleanField,
         datetime: DateTimeField,
+        Tuple[
+            int, int
+        ]: ListField,  # (field=IntField(), validation=validate_coordinates),
     }
     for name, field in pydantic_model.__fields__.items():
         cls = type_map.get(field.outer_type_)

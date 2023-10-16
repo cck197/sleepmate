@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Tuple
 
 from dateutil.parser import parse as date_parser
 from langchain.memory import ReadOnlySharedMemory
@@ -15,6 +16,10 @@ from .helpful_scripts import (
 )
 from .structured import get_parsed_output, pydantic_to_mongoengine
 from .user import DBUser, get_current_user
+
+######################################################################
+# Exercise Entry - a record of an exercise session
+######################################################################
 
 
 class ExerciseEntry_(BaseModel):
@@ -95,6 +100,51 @@ def get_exercise_dates(memory: ReadOnlySharedMemory, goal: str, utterance: str):
     return json_dumps(
         [e.date for e in DBExerciseEntry.objects(user=get_current_user())]
     )
+
+
+######################################################################
+# VLQ - Valued Living Questionnaire
+######################################################################
+
+
+class VLQEntry_(BaseModel):
+    date: datetime = Field(description="date of entry")
+    family_relations: Tuple[int, int] = Field(description="family relations")
+    marriage: Tuple[int, int] = Field(description="marriage/couples/intimate relations")
+    parenting: Tuple[int, int] = Field(description="being a parent")
+    friendships: Tuple[int, int] = Field(description="friendships/social relations")
+    work: Tuple[int, int] = Field(description="work")
+    education: Tuple[int, int] = Field(
+        description="education/personal growth and development"
+    )
+    recreation: Tuple[int, int] = Field(description="recreation/leisure")
+    spirituality: Tuple[int, int] = Field(description="spirituality/religion")
+    citizenship: Tuple[int, int] = Field(description="citizenship/community life")
+    physical_self_care: Tuple[int, int] = Field(
+        description="physical self-care (e.g., exercise, diet, sleep)"
+    )
+    environmental_issues: Tuple[int, int] = Field(
+        description="environmental issues (e.g., pollution, conservation)"
+    )
+    art: Tuple[int, int] = Field(description="art, creative expression, aesthetics")
+
+
+date_fields = get_date_fields(VLQEntry_)
+
+
+class VLQEntry(VLQEntry_):
+    @classmethod
+    def schema(cls):
+        return fix_schema(VLQEntry_, date_fields)
+
+    @validator(*date_fields, pre=True)
+    def convert_date_to_datetime(cls, _):
+        return datetime.now()
+
+
+DBVLQEntry = pydantic_to_mongoengine(
+    VLQEntry, extra_fields={"user": ReferenceField(DBUser, required=True)}
+)
 
 
 THOUGHT_EDITING_LIMITATIONS = """
