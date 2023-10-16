@@ -147,6 +147,42 @@ DBVLQEntry = pydantic_to_mongoengine(
 )
 
 
+def get_vlq_entry_from_memory(memory: BaseMemory) -> VLQEntry:
+    return get_parsed_output("summarise the VLQ", memory, VLQEntry)
+
+
+def save_vlq_entry_to_db(user: DBUser, entry: VLQEntry) -> DBVLQEntry:
+    return DBVLQEntry(**{"user": user, **entry.dict()}).save()
+
+
+def get_json_vlq_entry(entry: dict) -> str:
+    """Returns the VLQ entry in JSON format"""
+    return mongo_to_json(entry)
+
+
+@set_attribute("return_direct", False)
+def save_vlq_entry(memory: ReadOnlySharedMemory, goal: str, text: str):
+    """Saves VLQ entry to the database. Call with exactly one string argument."""
+    entry = get_vlq_entry_from_memory(memory)
+    print(f"save_vlq_entry {entry=}")
+    save_vlq_entry_to_db(get_current_user(), entry)
+
+
+def get_current_vlq_entry() -> DBVLQEntry:
+    """Returns current VLQ entry."""
+    return DBVLQEntry.objects(user=get_current_user()).order_by("-id").first()
+
+
+@set_attribute("return_direct", False)
+def get_vlq_entry(memory: ReadOnlySharedMemory, goal: str, utterance: str):
+    """Returns VLQ entry from the database. Call with exactly one string
+    argument."""
+    entry = get_current_vlq_entry()
+    print(f"get_vlq_entry {entry=}")
+    if entry is not None:
+        return get_json_vlq_entry(entry.to_mongo().to_dict())
+
+
 THOUGHT_EDITING_LIMITATIONS = """
 Explain changing thoughts in a given direction means taking their content
 seriously. You have to notice them and evaluate them to try to change them,
@@ -232,6 +268,8 @@ GOALS = [
         Tell the human that this is a discovery process, not a critique, and after
         all, they've embarked on this journey and they should give themselves some
         credit for that.  They're here to embrace change.
+        
+        Only after they've confirmed, save the VLQ diary entry to the database.
         """,
     },
 ]
@@ -241,4 +279,6 @@ TOOLS = [
     get_last_exercise_entry,
     save_exercise_entry,
     get_exercise_dates,
+    get_vlq_entry,
+    save_vlq_entry,
 ]
