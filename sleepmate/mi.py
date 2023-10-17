@@ -70,6 +70,7 @@ def get_listening_statement(
     respond with a listening statement (empathy) to motivate behaviour change.
     Respond to the last thing said below with a listening statement naming the
     emotion and justifying it in context. Be brief, fewer words are better.
+    Avoid saying "I hear you" instead say, "it sounds like".
     """
     return get_completion(
         memory,

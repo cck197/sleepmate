@@ -33,6 +33,11 @@ class Intake_(BaseModel):
     living_with: str = Field(description="living with")
     residence_type: str = Field(description="type of residence")
     noise_level: str = Field(description="noise level in the living area")
+    goal: str = Field(description="what does success look like?")
+    helpful: str = Field(description="what have you tried previously that helped?")
+    unhelpful: str = Field(
+        description="what have you tried previously that didn't help?"
+    )
     notes: str = Field(description="any other notes you'd like to add")
 
 
@@ -61,7 +66,7 @@ def get_intake_from_memory(memory: BaseMemory) -> Intake:
 def save_intake_to_db(user: DBUser, entry: Intake) -> DBIntake:
     entry = entry.dict()
     # delete any existing entries for this date
-    # DBIntake.objects(user=user, date=entry["date"]).delete()
+    DBIntake.objects(user=user, date=entry["date"]).delete()
     # save the new entry
     return DBIntake(**{"user": user, **entry}).save()
 
@@ -93,7 +98,8 @@ def get_last_intake(memory: ReadOnlySharedMemory, goal: str, utterance: str):
 GOALS = [
     {
         "intake": """
-        Your goal is to collect the following information.
+        Your goal is to collect the following information. Walk the human
+        through step by step. Don't ask more than one question at a time.
         
         Basic Information:
         - Sex
@@ -122,6 +128,11 @@ GOALS = [
         - Living with (Alone, Family, Friends)
         - Type of residence (House, Apartment, etc.)
         - Noise Level in the living area
+
+        Goals:
+        - What does success look like?
+        - What have you tried previously that helped?
+        - What have you tried previously that didn't help?
 
         Notes:
         - Anything else you'd like to add?
