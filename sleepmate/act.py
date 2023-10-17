@@ -1,13 +1,18 @@
 from datetime import datetime
 from typing import Tuple
 
-from dateutil.parser import parse as date_parser
 from langchain.memory import ReadOnlySharedMemory
 from langchain.pydantic_v1 import BaseModel, Field, validator
 from langchain.schema import BaseMemory
 from mongoengine import ReferenceField
 
-from .helpful_scripts import get_date_fields, json_dumps, mongo_to_json, set_attribute
+from .helpful_scripts import (
+    get_date_fields,
+    json_dumps,
+    mongo_to_json,
+    parse_date,
+    set_attribute,
+)
 from .structured import fix_schema, get_parsed_output, pydantic_to_mongoengine
 from .user import DBUser, get_current_user
 
@@ -80,7 +85,7 @@ def get_last_exercise_entry(memory: ReadOnlySharedMemory, goal: str, utterance: 
 @set_attribute("return_direct", False)
 def get_date_exercise_entry(memory: ReadOnlySharedMemory, goal: str, utterance: str):
     """Returns the exercise entry for a given date."""
-    date = date_parser(utterance)
+    date = parse_date(utterance)
     db_entry = DBExerciseEntry.objects(user=get_current_user(), date=date).first()
     if db_entry is None:
         return f"No exercise entry found for {date.date()}"

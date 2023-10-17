@@ -77,3 +77,19 @@ def parse_date(date: str, default_days=0) -> datetime:
         return date_parser(date)
     except ParserError:
         return datetime.now() - timedelta(days=default_days)
+
+
+def get_start_end(date: datetime) -> (datetime, datetime):
+    return (
+        datetime(
+            year=date.year, month=date.month, day=date.day, hour=0, minute=0, second=0
+        ),
+        datetime(
+            year=date.year,
+            month=date.month,
+            day=date.day,
+            hour=23,
+            minute=59,
+            second=59,
+        ),
+    )

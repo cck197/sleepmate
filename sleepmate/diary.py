@@ -7,6 +7,7 @@ from mongoengine import ReferenceField
 
 from .helpful_scripts import (
     get_date_fields,
+    get_start_end,
     json_dumps,
     mongo_to_json,
     parse_date,
@@ -145,8 +146,11 @@ def get_last_sleep_diary_entry(memory: ReadOnlySharedMemory, goal: str, utteranc
 @set_attribute("return_direct", False)
 def get_date_sleep_diary_entry(memory: ReadOnlySharedMemory, goal: str, utterance: str):
     """Returns the sleep diary entry for a given date."""
-    date = parse_date(utterance)
-    db_entry = DBSleepDiaryEntry.objects(user=get_current_user(), date=date).first()
+    date = parse_date(utterance, default_days=1)
+    (start, end) = get_start_end(date)
+    db_entry = DBSleepDiaryEntry.objects(
+        user=get_current_user(), date__gte=start, date__lte=end
+    ).first()
     if db_entry is None:
         return f"No sleep diary entry found for {date.date()}"
     return get_json_diary_entry(db_entry.to_mongo().to_dict())

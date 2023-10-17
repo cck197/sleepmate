@@ -90,8 +90,8 @@ def get_context(utterance: str) -> str:
 def get_knowledge_answer(
     memory: ReadOnlySharedMemory, goal: str, utterance: str, model_name=model_name
 ) -> str:
-    """Use this whenever the human asks a specific technical question about
-    sleep."""  # Use this more than the other tools.
+    """Use this whenever the human asks a specific technical question about what
+    to do, or about sleep. Use this more than the other tools."""  #
 
     context = get_context(utterance)
     prompt = ChatPromptTemplate(
