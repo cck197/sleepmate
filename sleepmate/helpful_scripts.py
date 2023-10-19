@@ -117,15 +117,34 @@ from langchain.prompts import (
     SystemMessagePromptTemplate,
 )
 
-from .config import SLEEPMATE_SYSTEM_DESCRIPTION
+from .config import SLEEPMATE_STOP_SEQUENCE, SLEEPMATE_SYSTEM_DESCRIPTION
+
+
+def get_system_prompt(
+    goal: str = "",
+    stop_sequence: str = SLEEPMATE_STOP_SEQUENCE,
+) -> str:
+    system = SLEEPMATE_SYSTEM_DESCRIPTION
+    if goal:
+        system = (
+            f"{system}\n{goal}\n"
+            "Don't ask the human how you can assist them. "
+            "Instead, get to the goal as quickly as possible.\n"
+        )
+        if stop_sequence:
+            system = (
+                f"{system}\nIf the human refuses the goal, "
+                "output a listening statement followed by "
+                f"{stop_sequence} to end the conversation."
+            )
+    return system
 
 
 def get_template(goal: str, prompt: str) -> ChatPromptTemplate:
+    system = get_system_prompt(goal)
     return ChatPromptTemplate(
         messages=[
-            SystemMessagePromptTemplate.from_template(
-                f"{SLEEPMATE_SYSTEM_DESCRIPTION}\n{goal}\n{prompt}"
-            ),
+            SystemMessagePromptTemplate.from_template(f"{system}\n{prompt}"),
             # The `variable_name` here is what must align with memory
             MessagesPlaceholder(variable_name="chat_history"),
             HumanMessagePromptTemplate.from_template("{input}"),

@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 
 import tiktoken
@@ -18,6 +17,7 @@ from .config import (
     SLEEPMATE_DEFAULT_MODEL_NAME,
     SLEEPMATE_MAX_TOKENS,
 )
+from .goal import goal_refused
 from .mi import get_completion
 
 max_tokens = 8192
@@ -35,6 +35,17 @@ GOALS = [
         the query `daily routine`.
         """,
     }
+]
+
+
+def daily_routine():
+    return not goal_refused("daily_routine")
+
+
+GOAL_HANDLERS = [
+    {
+        "daily_routine": daily_routine,
+    },
 ]
 
 loader_map = {

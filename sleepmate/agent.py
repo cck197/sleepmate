@@ -23,11 +23,17 @@ from .config import (
     SLEEPMATE_DEFAULT_MODEL_NAME,
     SLEEPMATE_MEMORY_PATH,
     SLEEPMATE_SAMPLING_TEMPERATURE,
-    SLEEPMATE_SYSTEM_DESCRIPTION,
+    SLEEPMATE_STOP_SEQUENCE,
 )
 from .db import *
 from .goal import set_goal_refused
-from .helpful_scripts import display_markdown, flatten_dict, import_attrs, json_dumps
+from .helpful_scripts import (
+    display_markdown,
+    flatten_dict,
+    get_system_prompt,
+    import_attrs,
+    json_dumps,
+)
 from .user import get_user_from_email
 
 GOALS = [
@@ -83,15 +89,13 @@ def get_tools(funcs, memory: ReadOnlySharedMemory, goal: str) -> list[Tool]:
 
 
 class GoalRefusedHandler(BaseCallbackHandler):
-    STOP_SEQUENCE: str = "🛑🛑🛑"
-
     def __init__(self, callback) -> None:
         super().__init__()
         self.callback = callback
 
     def on_agent_finish(self, action: AgentAction, **kwargs: Any) -> Any:
         # print(f"on_agent_finish {action}")
-        if self.STOP_SEQUENCE in action.return_values["output"]:
+        if SLEEPMATE_STOP_SEQUENCE in action.return_values["output"]:
             self.callback(action)
 
 
@@ -123,7 +127,7 @@ class X(object):
             self.fixed_goal = True
             self.set_agent()
         else:
-            self.goal = ""
+            self.goal = None
         if self.hello:
             self("hey")
 
@@ -133,10 +137,12 @@ class X(object):
         if self.fixed_goal:
             return self.goal
 
+        # TODO make this configurable
         goal_list = [
             "health_history",
             "insomnia_severity_index",
             "diary_probe",
+            "daily_routine",
         ]
         goal = ""
         for goal_ in goal_list:
@@ -155,10 +161,11 @@ class X(object):
 
         # the model is fine tuned for selecting a function
         # sampling temperature is set to 0 (no sampling)
+        goal = self.goals["GOALS"][self.goal] if self.goal else None
         agent = OpenAIFunctionsAgent(
             llm=ChatOpenAI(temperature=0, model=SLEEPMATE_AGENT_MODEL_NAME),
-            tools=get_tools(self.tools, self.ro_memory, self.goal),
-            prompt=get_agent_prompt(self.goals["GOALS"][self.goal]),
+            tools=get_tools(self.tools, self.ro_memory, goal),
+            prompt=get_agent_prompt(goal),
         )
         self.agent_executor = AgentExecutor(
             agent=agent, tools=agent.tools, memory=self.memory
@@ -224,21 +231,8 @@ class X(object):
 
 def get_agent_prompt(
     goal: str = "",
-    stop_sequence: str = GoalRefusedHandler.STOP_SEQUENCE,
 ) -> ChatPromptTemplate:
-    system = SLEEPMATE_SYSTEM_DESCRIPTION
-    if goal:
-        system = (
-            f"{system}\n{goal}\n"
-            "Don't ask the human how you can assist them. "
-            "Instead, get to the goal as quickly as possible.\n"
-        )
-        if stop_sequence:
-            system = (
-                f"{system}\nIf the human refuses the goal, "
-                "output a listening statement followed by "
-                f"{stop_sequence} to end the conversation."
-            )
+    system = get_system_prompt(goal)
     return ChatPromptTemplate.from_messages(
         [
             SystemMessagePromptTemplate.from_template(system),
