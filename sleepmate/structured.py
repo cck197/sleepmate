@@ -5,6 +5,8 @@ from typing import List, Tuple
 from langchain.chains import LLMChain
 from langchain.chat_models import ChatOpenAI
 
+# kinda almost works with davinci
+# model_name = "text-davinci-003"
 # from langchain.llms import OpenAI
 from langchain.memory import ConversationBufferWindowMemory
 from langchain.output_parsers import PydanticOutputParser
@@ -21,18 +23,13 @@ from mongoengine import (
     StringField,
 )
 
+from .config import SLEEPMATE_PARSER_MODEL_NAME
 from .helpful_scripts import flatten_list
-
-# from langchain.chat_models import ChatOpenAI
-
-
-# kinda almost works with davinci
-# model_name = "text-davinci-003"
-# model_name = "gpt-3.5-turbo"
-model_name = "gpt-4"
 
 
 def fix_schema(cls, date_fields):
+    """Remove the format from date fields to keep the PydanticOutputParser
+    happy."""
     s = cls.schema()
     for key in date_fields:
         try:
@@ -52,6 +49,7 @@ def get_memory_tail(
 
 
 def create_from_positional_args(model_cls, text: str):
+    """Create a pydantic model from positional args."""
     try:
         args = flatten_list(json.loads(text))
     except json.JSONDecodeError:
@@ -75,13 +73,14 @@ def get_parsed_output(
         partial_variables={"format_instructions": parser.get_format_instructions()},
     )
     # llm = OpenAI(model_name=model_name, temperature=0.0)
-    llm = ChatOpenAI(model_name=model_name, temperature=0.0)
+    llm = ChatOpenAI(model_name=SLEEPMATE_PARSER_MODEL_NAME, temperature=0.0)
     chain = LLMChain(llm=llm, prompt=prompt, memory=get_memory_tail(memory, k=k))
     output = chain({"query": query})
     return parser.parse(output["text"])
 
 
 def pydantic_to_mongoengine(pydantic_model, extra_fields=None):
+    """Convert a pydantic model to a mongoengine model."""
     fields = {}
     type_map = {
         str: StringField,

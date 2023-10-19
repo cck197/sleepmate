@@ -67,7 +67,8 @@ def get_json_seed_pod(entry: dict) -> str:
 
 @set_attribute("return_direct", False)
 def save_seed_pod(memory: ReadOnlySharedMemory, goal: str, text: str):
-    """Saves SEEDS to the database. Call with exactly one string argument."""
+    """Saves SEEDS to the database. Call *only* after all the SEEDS questions
+    have been answered."""
     entry = create_from_positional_args(SeedPod, text)
     if entry is None:
         entry = get_seed_pod_from_memory(memory)
@@ -82,8 +83,7 @@ def get_current_seed_pod() -> DBSeedPod:
 
 @set_attribute("return_direct", False)
 def get_seed_pod(memory: ReadOnlySharedMemory, goal: str, utterance: str):
-    """Returns predefined SEEDS tasks from the database. Call with exactly one
-    string argument."""
+    """Returns predefined SEEDS tasks from the database."""
     entry = get_current_seed_pod()
     print(f"get_seed_pod {entry=}")
     if entry is not None:
@@ -151,8 +151,8 @@ def get_json_seeds(entry: dict) -> str:
 
 @set_attribute("return_direct", False)
 def save_seeds_diary_entry(memory: ReadOnlySharedMemory, goal: str, text: str):
-    """Saves a SEEDS diary entry to the database. Important: call with exactly
-    one string argument."""
+    """Saves a SEEDS diary entry to the database. Call *only* after all the
+    SEEDS diary entry questions have been answered."""
     entry = create_from_positional_args(SeedsDiaryEntry, text)
     if entry is None:
         entry = get_seeds_from_memory(memory)
@@ -167,8 +167,7 @@ def get_current_seeds() -> DBSeedsDiaryEntry:
 
 @set_attribute("return_direct", False)
 def get_seeds_diary_entry(memory: ReadOnlySharedMemory, goal: str, utterance: str):
-    """Returns SEEDS diary entry from the database. Important: call with exactly
-    one string argument."""
+    """Returns SEEDS diary entry from the database."""
     db_entry = get_current_seeds()
     print(f"get_seeds_diary_entry {db_entry=}")
     if db_entry is not None:

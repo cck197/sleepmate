@@ -2,11 +2,9 @@ from langchain.memory import ReadOnlySharedMemory
 
 from .mi import get_completion, get_template
 
-model_name = "gpt-4"
-
 
 def get_self_harm_advice(
-    memory: ReadOnlySharedMemory, goal: str, utterance: str, model_name=model_name
+    memory: ReadOnlySharedMemory, goal: str, utterance: str
 ) -> str:
     """Use this when the human is suggesting they might self-harm. Provide
     information about 988 Suicide and Crisis Lifeline:"""
@@ -14,13 +12,10 @@ def get_self_harm_advice(
         memory,
         utterance,
         get_template(goal, get_self_harm_advice.__doc__),
-        model_name,
     )
 
 
-def get_on_topic(
-    memory: ReadOnlySharedMemory, goal: str, utterance: str, model_name=model_name
-) -> str:
+def get_on_topic(memory: ReadOnlySharedMemory, goal: str, utterance: str) -> str:
     """Use this when the human asks about anything other than health and
     performance. Tell them you don't know anything about {input}."""
 
@@ -28,8 +23,7 @@ def get_on_topic(
         memory,
         utterance,
         get_template(goal, get_on_topic.__doc__),
-        model_name,
     )
 
 
-TOOLS = [get_self_harm_advice, get_on_topic]
+# TOOLS = [get_self_harm_advice, get_on_topic]

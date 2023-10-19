@@ -1,4 +1,3 @@
-import os
 import pickle
 from datetime import date
 from functools import partial
@@ -19,56 +18,23 @@ from langchain.schema import AgentAction
 from langchain.tools import BaseTool, Tool
 
 from .audio import play
-from .db import *
-from .helpful_scripts import (
-    display_markdown,
-    flatten_list_of_dicts,
-    import_attrs,
-    json_dumps,
+from .config import (
+    SLEEPMATE_AGENT_MODEL_NAME,
+    SLEEPMATE_DEFAULT_MODEL_NAME,
+    SLEEPMATE_MEMORY_PATH,
+    SLEEPMATE_SAMPLING_TEMPERATURE,
+    SLEEPMATE_SYSTEM_DESCRIPTION,
 )
-from .meta import MetaX
+from .db import *
+from .goal import set_goal_refused
+from .helpful_scripts import display_markdown, flatten_dict, import_attrs, json_dumps
 from .user import get_user_from_email
-
-DEBUG = os.environ.get("DEBUG", False)
-if DEBUG:
-    import langchain
-
-    langchain.verbose = True  # langchain.debug = True
-
-SYSTEM_DESCRIPTION = """
-You are a somewhat lighthearted AI clinician skilled in Motivational
-Interviewing and Acceptance and Commitment Therapy. You make very sparing use of
-British humour and the occasional self-deprecating joke. Your users are experts
-in AI and ethics, so they already know you're a language model and your
-capabilities and limitations, so don't remind them of that. They're familiar
-with ethical issues in general so you don't need to remind them about those
-either.
-"""
-
-# MAX_TOKENS = 8192
 
 GOALS = [
     {
-        "test": """Ask the human their favourite colour.""",
+        "test": """Your goal is to find out the human's favourite colour.""",
     }
 ]
-
-model_name = "gpt-4"
-
-SLEEPMATE_MEMORY_PATH = os.environ.get("SLEEPMATE_MEMORY_PATH")
-
-
-def get_template(goal: str, prompt: str) -> ChatPromptTemplate:
-    return ChatPromptTemplate(
-        messages=[
-            SystemMessagePromptTemplate.from_template(
-                f"{SYSTEM_DESCRIPTION}\n{goal}\n{prompt}"
-            ),
-            # The `variable_name` here is what must align with memory
-            MessagesPlaceholder(variable_name="chat_history"),
-            HumanMessagePromptTemplate.from_template("{input}"),
-        ]
-    )
 
 
 def get_date(*args, **kwargs) -> date:
@@ -116,15 +82,8 @@ def get_tools(funcs, memory: ReadOnlySharedMemory, goal: str) -> list[Tool]:
     return tools
 
 
-def get_goals() -> list[dict]:
-    return flatten_list_of_dicts(import_attrs("GOALS"))
-
-
-goals = get_goals()
-
-
-class GoalAchievedHandler(BaseCallbackHandler):
-    STOP_SEQUENCE: str = "🚀🚀🚀"
+class GoalRefusedHandler(BaseCallbackHandler):
+    STOP_SEQUENCE: str = "🛑🛑🛑"
 
     def __init__(self, callback) -> None:
         super().__init__()
@@ -137,34 +96,95 @@ class GoalAchievedHandler(BaseCallbackHandler):
 
 
 class X(object):
-    def __init__(self, *args, **kwargs) -> None:
-        self.audio = kwargs.pop("audio", False)
-        self.display = kwargs.pop("display", True)
-        self.hello = kwargs.pop("hello", True)
-        self.add_user = kwargs.pop("add_user", True)
-        self.db_user = get_user_from_email(kwargs.pop("email", None))
-        self.agent_executor = get_agent(*args, **kwargs)
-        self.goal_accomplished = False
-        self.stop_handler = GoalAchievedHandler(self.set_goal_accomplished)
+    def __init__(
+        self,
+        goal: str = "",
+        audio: bool = False,
+        display: bool = True,
+        hello: bool = True,
+        add_user: bool = True,
+        email: str = None,
+    ) -> None:
+        self.fixed_goal = False
+        self.memory = None
+        self.tools = import_attrs(["TOOLS"])["TOOLS"]
+        print(f"X() len(self.tools)={len(self.tools)}")
+        self.goals = flatten_dict(import_attrs(["GOALS", "GOAL_HANDLERS"]))
+
+        self.audio = audio
+        self.display = display
+        self.hello = hello
+        self.add_user = add_user
+        self.db_user = get_user_from_email(email)
+        self.goal_refused = False
+        self.stop_handler = GoalRefusedHandler(self.set_goal_refused)
+        if goal:
+            self.goal = self.goals["GOALS"][goal]
+            self.fixed_goal = True
+            self.set_agent()
+        else:
+            self.goal = ""
         if self.hello:
             self("hey")
 
-    def set_goal_accomplished(
-        self, action: AgentAction, goal_accomplished: bool = True
-    ) -> None:
-        self.goal_accomplished = goal_accomplished
+    def get_next_goal(self) -> str:
+        """Returns the next goal. Calls a function in each of the goal modules
+        in a predefined order and return the first goal that returns True."""
+        if self.fixed_goal:
+            return self.goal
+
+        goal_list = [
+            "health_history",
+            "insomnia_severity_index",
+            "diary_probe",
+        ]
+        goal = ""
+        for goal_ in goal_list:
+            if self.goals["GOAL_HANDLERS"][goal_]():
+                goal = goal_
+                break
+
+        print(f"X.get_next_goal {goal=}")
+        return goal
+
+    def set_agent(self):
+        if self.memory is None:
+            self.memory = X.load_memory()
+            self.ro_memory = ReadOnlySharedMemory(memory=self.memory)
+            self.add_user_to_memory()
+
+        # the model is fine tuned for selecting a function
+        # sampling temperature is set to 0 (no sampling)
+        agent = OpenAIFunctionsAgent(
+            llm=ChatOpenAI(temperature=0, model=SLEEPMATE_AGENT_MODEL_NAME),
+            tools=get_tools(self.tools, self.ro_memory, self.goal),
+            prompt=get_agent_prompt(self.goals["GOALS"][self.goal]),
+        )
+        self.agent_executor = AgentExecutor(
+            agent=agent, tools=agent.tools, memory=self.memory
+        )
+
+    def set_goal_refused(self, action: AgentAction, goal_refused: bool = True) -> None:
+        self.goal_refused = goal_refused
+        if goal_refused:
+            set_goal_refused(self.goal)
 
     def add_user_to_memory(self) -> None:
-        self.agent_executor.memory.chat_memory.add_ai_message("what's your name?")
-        self.agent_executor.memory.chat_memory.add_user_message(self.db_user.name)
-        self.agent_executor.memory.chat_memory.add_ai_message("what's your email?")
-        self.agent_executor.memory.chat_memory.add_user_message(self.db_user.email)
+        if self.add_user:
+            self.memory.chat_memory.add_ai_message("what's your name?")
+            self.memory.chat_memory.add_user_message(self.db_user.name)
+            self.memory.chat_memory.add_ai_message("what's your email?")
+            self.memory.chat_memory.add_user_message(self.db_user.email)
+            # TODO what happens when this falls off the end of the chat history?
+            self.add_user = False
 
     def __call__(self, utterance: str, save: bool = True) -> bool:
-        self.goal_accomplished = False
-        if self.add_user:
-            self.add_user_to_memory()
-            self.add_user = False
+        self.goal_refused = False
+        goal = self.get_next_goal()
+        if goal != self.goal:
+            # print(f"X.__call__ {goal=}")
+            self.goal = goal
+            self.set_agent()
 
         output = self.agent_executor.run(utterance, callbacks=[self.stop_handler])
         # print(output)
@@ -188,75 +208,42 @@ class X(object):
         memory_key: str = "chat_history",
     ) -> ConversationBufferWindowMemory:
         if Path(filename).exists():
-            print(f"load_memory {filename=}")
+            print(f"X.load_memory {filename=}")
             with open(filename, "rb") as f:
                 return pickle.load(f)
         return ConversationBufferWindowMemory(
-            llm=ChatOpenAI(),
+            llm=ChatOpenAI(
+                temperature=SLEEPMATE_SAMPLING_TEMPERATURE,
+                model_name=SLEEPMATE_DEFAULT_MODEL_NAME,
+            ),
             memory_key=memory_key,
             return_messages=True,
             k=k,
         )
 
 
-class Runner(object):
-    def __init__(self, *args, **kwargs) -> None:
-        self.args = args
-        self.kwargs = kwargs
-        self.kwargs["memory"] = X.load_memory()
-
-    def run(self):
-        self.kwargs["goal"] = None
-        while True:
-            if self.kwargs["goal"] is None:
-                # use the memory (chat_history) to determine the goal
-                goal = MetaX(self.kwargs["memory"])()
-                goal_ = goals.get(goal)
-                if goal_ is not None:
-                    self.kwargs["goal"] = goal_
-                print(f"X.run {goal=}")
-                x = X(*self.args, **self.kwargs)
-
-            utterance = input("> ")
-            bot_message = x(utterance)
-            print(f"> {bot_message}")
-            if x.goal_accomplished:
-                self.kwargs["goal"] = None
-
-
 def get_agent_prompt(
-    system_description: str = SYSTEM_DESCRIPTION,
     goal: str = "",
-    stop_sequence: str = GoalAchievedHandler.STOP_SEQUENCE,
+    stop_sequence: str = GoalRefusedHandler.STOP_SEQUENCE,
 ) -> ChatPromptTemplate:
+    system = SLEEPMATE_SYSTEM_DESCRIPTION
+    if goal:
+        system = (
+            f"{system}\n{goal}\n"
+            "Don't ask the human how you can assist them. "
+            "Instead, get to the goal as quickly as possible.\n"
+        )
+        if stop_sequence:
+            system = (
+                f"{system}\nIf the human refuses the goal, "
+                "output a listening statement followed by "
+                f"{stop_sequence} to end the conversation."
+            )
     return ChatPromptTemplate.from_messages(
         [
-            SystemMessagePromptTemplate.from_template(
-                f"{system_description}\n{goal}"
-                "Don't ask the human how you can assist them. "
-                "Instead, get to the goal as quickly as possible.\n"
-                "Once the above goal is complete, output "
-                f"{stop_sequence} to end the conversation."
-                if stop_sequence
-                else "",
-            ),
+            SystemMessagePromptTemplate.from_template(system),
             MessagesPlaceholder(variable_name="chat_history"),
             HumanMessagePromptTemplate.from_template("{input}"),
             MessagesPlaceholder(variable_name="agent_scratchpad"),
         ]
     )
-
-
-def get_agent(goal="", tools=None, memory=None, model_name="gpt-4-0613"):
-    if tools is None:
-        tools = import_attrs("TOOLS")
-    print(f"get_agent len(tools)={len(tools)}")
-    if memory is None:
-        memory = X.load_memory()
-    ro_memory = ReadOnlySharedMemory(memory=memory)
-    agent = OpenAIFunctionsAgent(
-        llm=ChatOpenAI(temperature=0, model=model_name),
-        tools=get_tools(tools, ro_memory, goal),
-        prompt=get_agent_prompt(goal),
-    )
-    return AgentExecutor(agent=agent, tools=agent.tools, memory=memory)

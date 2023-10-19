@@ -66,7 +66,8 @@ def get_json_exercise_entry(entry: dict) -> str:
 
 @set_attribute("return_direct", False)
 def save_exercise_entry(memory: ReadOnlySharedMemory, goal: str, utterance: str):
-    """Saves the exercise entry to the database. Input should be the empty string."""
+    """Saves the exercise entry to the database *only* after the exercise is
+    complete."""
     entry = get_exercise_entry_from_memory(memory)
     print(f"save_exercise_entry {entry=}")
     save_exercise_entry_to_db(get_current_user(), entry)
@@ -75,9 +76,10 @@ def save_exercise_entry(memory: ReadOnlySharedMemory, goal: str, utterance: str)
 @set_attribute("return_direct", False)
 def get_last_exercise_entry(memory: ReadOnlySharedMemory, goal: str, utterance: str):
     """Returns the last exercise entry."""
-    entry = (
-        DBExerciseEntry.objects(user=get_current_user()).first().to_mongo().to_dict()
-    )
+    entry = DBExerciseEntry.objects(user=get_current_user()).order_by("-id").first()
+    if entry is None:
+        return "No exercise entries found"
+    entry = entry.to_mongo().to_dict()
     print(f"get_last_exercise_entry {entry=}")
     return get_json_exercise_entry(entry)
 
@@ -161,7 +163,8 @@ def get_json_vlq_entry(entry: dict) -> str:
 
 @set_attribute("return_direct", False)
 def save_vlq_entry(memory: ReadOnlySharedMemory, goal: str, text: str):
-    """Saves VLQ entry to the database. Call with exactly one string argument."""
+    """Saves VLQ entry to the database. Call *only* after all the VLQ questions
+    have been answered."""
     entry = get_vlq_entry_from_memory(memory)
     print(f"save_vlq_entry {entry=}")
     save_vlq_entry_to_db(get_current_user(), entry)
@@ -174,8 +177,7 @@ def get_current_vlq_entry() -> DBVLQEntry:
 
 @set_attribute("return_direct", False)
 def get_vlq_entry(memory: ReadOnlySharedMemory, goal: str, utterance: str):
-    """Returns VLQ entry from the database. Call with exactly one string
-    argument."""
+    """Returns VLQ entry from the database."""
     entry = get_current_vlq_entry()
     print(f"get_vlq_entry {entry=}")
     if entry is not None:

@@ -5,6 +5,7 @@ from langchain.pydantic_v1 import BaseModel, Field, validator
 from langchain.schema import BaseMemory
 from mongoengine import ReferenceField
 
+from .goal import goal_refused
 from .helpful_scripts import (
     get_date_fields,
     json_dumps,
@@ -68,8 +69,8 @@ def get_json_isi_entry(entry: dict) -> str:
 
 @set_attribute("return_direct", False)
 def save_isi_entry(memory: ReadOnlySharedMemory, goal: str, utterance: str):
-    """Saves the Insomnia Severity Index entry to the database. Input should be
-    the empty string."""
+    """Saves the Insomnia Severity Index entry to the database. Call *only*
+    after all the Insomnia Severity Index questions have been answered."""
     entry = get_isi_entry_from_memory(memory)
     print(f"save_isi_entry {entry=}")
     save_isi_entry_to_db(get_current_user(), entry)
@@ -78,7 +79,10 @@ def save_isi_entry(memory: ReadOnlySharedMemory, goal: str, utterance: str):
 @set_attribute("return_direct", False)
 def get_last_isi_entry(memory: ReadOnlySharedMemory, goal: str, utterance: str):
     """Returns the last Insomnia Severity Index entry."""
-    entry = DBISIEntry.objects(user=get_current_user()).first().to_mongo().to_dict()
+    entry = DBISIEntry.objects(user=get_current_user()).order_by("-id").first()
+    if entry is None:
+        return "No Insomnia Severity Index entries found"
+    entry = entry.to_mongo().to_dict()
     print(f"get_last_isi_entry {entry=}")
     return get_json_isi_entry(entry)
 
@@ -100,6 +104,18 @@ def get_isi_dates(memory: ReadOnlySharedMemory, goal: str, utterance: str):
     return json_dumps([e.date for e in DBISIEntry.objects(user=get_current_user())])
 
 
+def insomnia_severity_index():
+    if goal_refused("insomnia_severity_index"):
+        return False
+    return DBISIEntry.objects(user=get_current_user()).count() == 0
+
+
+GOAL_HANDLERS = [
+    {
+        "insomnia_severity_index": insomnia_severity_index,
+    },
+]
+
 GOALS = [
     {
         "insomnia_severity_index": """
@@ -107,7 +123,7 @@ GOALS = [
         using the standard 7-item questionnaire, but don't ask until you've
         asked an open question, and the human has confirmed the accuracy of at
         least one listening statement. Ask if now would be a good time then the
-        following questions:
+        following questions. Don't ask more than one question at time.
         
         0. Date of entry (get today's date and make that the default)
         1. Difficulty falling asleep.

@@ -13,15 +13,20 @@ from langchain.prompts import (
 )
 from langchain.vectorstores import Chroma
 
+from .config import (
+    SLEEPMATE_DATADIR,
+    SLEEPMATE_DEFAULT_MODEL_NAME,
+    SLEEPMATE_MAX_TOKENS,
+)
 from .mi import get_completion
 
-model_name = "gpt-4"
 max_tokens = 8192
 
 GOALS = [
     {
         "knowledge": """
-        Your goal is to answer any questions the human has about sleep.
+        Your goal is to answer any questions the human has about health,
+        wellness and performance.
         """,
         "daily_routine": """
         Your goal is to help the human identify a daily routine that will help
@@ -37,8 +42,6 @@ loader_map = {
     ".txt": TextLoader,
 }
 
-DATADIR = os.environ.get("DATADIR", "data")
-
 
 def download_files(path="data"):
     """Stub for S3 download"""
@@ -46,7 +49,7 @@ def download_files(path="data"):
 
 
 def count_tokens(text: str) -> int:
-    encoding = tiktoken.encoding_for_model(model_name)
+    encoding = tiktoken.encoding_for_model(SLEEPMATE_DEFAULT_MODEL_NAME)
     return len(encoding.encode(text))
 
 
@@ -73,7 +76,7 @@ def load_input_files(path="data", overwrite=False):
     return db
 
 
-db = load_input_files(DATADIR)
+db = load_input_files(SLEEPMATE_DATADIR)
 
 
 def get_context(utterance: str) -> str:
@@ -81,14 +84,14 @@ def get_context(utterance: str) -> str:
         docs = db.similarity_search(utterance, k=k)
         context = " ".join([d.page_content for d in docs])
         if count_tokens(context) < (
-            max_tokens - 100
+            SLEEPMATE_MAX_TOKENS - 100
         ):  # leave some room for the prompt TODO
             return context
     assert False, "similarity search failed"
 
 
 def get_knowledge_answer(
-    memory: ReadOnlySharedMemory, goal: str, utterance: str, model_name=model_name
+    memory: ReadOnlySharedMemory, goal: str, utterance: str
 ) -> str:
     """Use this whenever the human asks a specific technical question about what
     to do, or about sleep. Use this more than the other tools."""  #
@@ -117,7 +120,7 @@ def get_knowledge_answer(
             HumanMessagePromptTemplate.from_template("{input}"),
         ]
     )
-    return get_completion(memory, utterance, prompt, model_name)
+    return get_completion(memory, utterance, prompt)
 
 
 TOOLS = [get_knowledge_answer]

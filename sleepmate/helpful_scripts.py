@@ -1,7 +1,9 @@
 import importlib
 import json
+from collections import defaultdict
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import List
 
 from dateutil.parser import ParserError
 from dateutil.parser import parse as date_parser
@@ -33,28 +35,38 @@ def mongo_to_json(entry: dict) -> str:
     return json_dumps(entry)
 
 
-def import_attrs(attr: str, dir: str = None) -> list:
+def import_attrs(attrs: List[str], dir: str = None) -> dict:
     """Import all the attributes from all the .py files in dir. Return a list of
     all the attributes with the given name."""
     if dir is None:
         dir = Path(__file__).parent
-    attrs = []
+    imported = defaultdict(list)
     # print(f"{dir=}")
     for p in dir.glob("*.py"):
         try:
             import_path = f"{dir.name}.{p.stem}"
             # print(f"{import_path=}")
-            attrs.extend(getattr(importlib.import_module(import_path), attr))
+            for attr in attrs:
+                imported[attr].extend(
+                    getattr(importlib.import_module(import_path), attr)
+                )
         except AttributeError as e:
             # print(f"import_attrs {e=}")
             continue
-    return attrs
+    return imported
 
 
 def flatten_list_of_dicts(dicts_list):
     result = {}
     for d in dicts_list:
         result.update(d)
+    return result
+
+
+def flatten_dict(d):
+    result = {}
+    for k, v in d.items():
+        result[k] = flatten_list_of_dicts(v)
     return result
 
 
@@ -79,7 +91,10 @@ def parse_date(date: str, default_days=0) -> datetime:
         return datetime.now() - timedelta(days=default_days)
 
 
-def get_start_end(date: datetime) -> (datetime, datetime):
+def get_start_end(date: datetime = None) -> (datetime, datetime):
+    """Return the start and end of a day."""
+    if date is None:
+        date = datetime.now()
     return (
         datetime(
             year=date.year, month=date.month, day=date.day, hour=0, minute=0, second=0
@@ -92,4 +107,27 @@ def get_start_end(date: datetime) -> (datetime, datetime):
             minute=59,
             second=59,
         ),
+    )
+
+
+from langchain.prompts import (
+    ChatPromptTemplate,
+    HumanMessagePromptTemplate,
+    MessagesPlaceholder,
+    SystemMessagePromptTemplate,
+)
+
+from .config import SLEEPMATE_SYSTEM_DESCRIPTION
+
+
+def get_template(goal: str, prompt: str) -> ChatPromptTemplate:
+    return ChatPromptTemplate(
+        messages=[
+            SystemMessagePromptTemplate.from_template(
+                f"{SLEEPMATE_SYSTEM_DESCRIPTION}\n{goal}\n{prompt}"
+            ),
+            # The `variable_name` here is what must align with memory
+            MessagesPlaceholder(variable_name="chat_history"),
+            HumanMessagePromptTemplate.from_template("{input}"),
+        ]
     )

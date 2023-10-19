@@ -5,6 +5,7 @@ from langchain.pydantic_v1 import BaseModel, Field, validator
 from langchain.schema import BaseMemory
 from mongoengine import ReferenceField
 
+from .goal import goal_refused
 from .helpful_scripts import (
     get_date_fields,
     get_start_end,
@@ -21,8 +22,6 @@ from .structured import (
     pydantic_to_mongoengine,
 )
 from .user import DBUser, get_current_user
-
-model_name = "gpt-4"
 
 
 class SleepDiaryEntry_(BaseModel):
@@ -100,7 +99,10 @@ def save_sleep_diary_entry_to_db(
 ) -> DBSleepDiaryEntry:
     entry = adjust_to_baseline_date(entry.dict())
     # delete any existing entries for this date
-    DBSleepDiaryEntry.objects(user=user, date=entry["date"]).delete()
+    (start, end) = get_start_end(entry["date"])
+    DBSleepDiaryEntry.objects(
+        user=get_current_user(), date__gte=start, date__lte=end
+    ).delete()
     # save the new entry
     return DBSleepDiaryEntry(**{"user": user, **entry}).save()
 
@@ -114,8 +116,8 @@ def get_json_diary_entry(entry: dict) -> str:
 
 @set_attribute("return_direct", False)
 def save_sleep_diary_entry(memory: ReadOnlySharedMemory, goal: str, text: str):
-    """Saves the exercise entry to the database. Important: call with exactly
-    one string argument."""
+    """Saves the diary entry to the database. Call *only* after all the diary
+    entry questions have been answered."""
     entry = create_from_positional_args(SleepDiaryEntry, text)
     if entry is None:
         entry = get_sleep_diary_entry_from_memory(memory)
@@ -125,8 +127,7 @@ def save_sleep_diary_entry(memory: ReadOnlySharedMemory, goal: str, text: str):
 
 @set_attribute("return_direct", False)
 def get_sleep_diary_dates(memory: ReadOnlySharedMemory, goal: str, utterance: str):
-    """Returns the dates of all sleep diary entries in JSON format. Call with
-    exactly one string argument."""
+    """Returns the dates of all sleep diary entries in JSON format."""
     return json_dumps(
         [e.date for e in DBSleepDiaryEntry.objects(user=get_current_user())]
     )
@@ -156,6 +157,26 @@ def get_date_sleep_diary_entry(memory: ReadOnlySharedMemory, goal: str, utteranc
     return get_json_diary_entry(db_entry.to_mongo().to_dict())
 
 
+def diary_probe():
+    """Returns True if a Health History should happen."""
+    (start, end) = get_start_end()
+    if goal_refused("diary_probe", start, end):
+        return False
+
+    return (
+        DBSleepDiaryEntry.objects(
+            user=get_current_user(), date__gte=start, date__lte=end
+        ).count()
+        == 0
+    )
+
+
+GOAL_HANDLERS = [
+    {
+        "diary_probe": diary_probe,
+    },
+]
+
 SLEEP_EFFICIENCY = """
 Include sleep sleep duration in hours and minutes and efficiency as a
 percentage.
@@ -168,11 +189,9 @@ anything over 85%% is considered normal.
 GOALS = [
     {
         "diary_probe": """
-        Your goal is find out if the human has ever kept a sleep diary, but
-        don't ask until they've confirmed the accuracy of at least one listening
-        statement. If they haven't kept a sleep diary, ask if they'd like the AI
-        to help them keep one. If they have, ask if they'd like to share it with
-        the AI.
+        Your goal is find out if the human has ever kept a sleep diary. If they
+        haven't kept a sleep diary, ask if they'd like the AI to help them keep
+        one. If they have, ask if they'd like to share it with the AI.
         """,
     },
     {
@@ -217,7 +236,7 @@ GOALS = [
 
 
 def get_sleep_diary_description(
-    memory: ReadOnlySharedMemory, goal: str, utterance: str, model_name=model_name
+    memory: ReadOnlySharedMemory, goal: str, utterance: str
 ) -> str:
     """Use this when the human asks what a sleep diary is. Summarise the
     numbered list of questions only. Call with exactly one string argument."""
@@ -230,7 +249,6 @@ def get_sleep_diary_description(
             + GOALS[0]["diary_probe"]
             + "End by asking if they'd like the AI to help them keep a sleep diary.",
         ),
-        model_name,
     )
 
 

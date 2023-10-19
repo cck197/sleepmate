@@ -53,7 +53,8 @@ def get_json_stress_audit(entry: dict) -> str:
 
 @set_attribute("return_direct", False)
 def save_stress_audit(memory: ReadOnlySharedMemory, goal: str, text: str):
-    """Saves Stress Audit to the database. Call with exactly one string argument."""
+    """Saves Stress Audit to the database. Call *only* after all the Stress
+    Audit questions have been answered."""
     entry = get_stress_audit_from_memory(memory)
     print(f"save_stress_audit {entry=}")
     save_stress_audit_to_db(get_current_user(), entry)
@@ -66,8 +67,7 @@ def get_current_stress_audit() -> DBStressAudit:
 
 @set_attribute("return_direct", False)
 def get_stress_audit(memory: ReadOnlySharedMemory, goal: str, utterance: str):
-    """Returns Stress Audit from the database. Call with exactly one string
-    argument."""
+    """Returns Stress Audit from the database."""
     entry = get_current_stress_audit()
     print(f"get_stress_audit {entry=}")
     if entry is not None:
