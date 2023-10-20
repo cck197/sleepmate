@@ -2,7 +2,7 @@ import pickle
 from datetime import date
 from functools import partial
 from pathlib import Path
-from typing import Any, Dict, Tuple, Union
+from typing import Any, Dict, List, Tuple, Union
 
 from langchain.agents import AgentExecutor, OpenAIFunctionsAgent
 from langchain.callbacks.base import BaseCallbackHandler
@@ -21,7 +21,9 @@ from .audio import play
 from .config import (
     SLEEPMATE_AGENT_MODEL_NAME,
     SLEEPMATE_DEFAULT_MODEL_NAME,
+    SLEEPMATE_EMAIL_QUESTION,
     SLEEPMATE_MEMORY_PATH,
+    SLEEPMATE_NAME_QUESTION,
     SLEEPMATE_SAMPLING_TEMPERATURE,
     SLEEPMATE_STOP_SEQUENCE,
 )
@@ -29,6 +31,7 @@ from .db import *
 from .goal import set_goal_refused
 from .helpful_scripts import (
     display_markdown,
+    find_human_messages,
     flatten_dict,
     get_system_prompt,
     import_attrs,
@@ -100,6 +103,13 @@ class GoalRefusedHandler(BaseCallbackHandler):
 
 
 class X(object):
+    DEFAULT_GOAL_LIST = [
+        "health_history",
+        "insomnia_severity_index",
+        "diary_entry",
+        "daily_routine",
+    ]
+
     def __init__(
         self,
         goal: str = "",
@@ -108,12 +118,15 @@ class X(object):
         hello: bool = True,
         add_user: bool = True,
         email: str = None,
+        goal_list: List[str] = None,
     ) -> None:
         self.fixed_goal = False
+        self.goal_list = goal_list or X.DEFAULT_GOAL_LIST
         self.memory = None
         self.tools = import_attrs(["TOOLS"])["TOOLS"]
         print(f"X() len(self.tools)={len(self.tools)}")
         self.goals = flatten_dict(import_attrs(["GOALS", "GOAL_HANDLERS"]))
+        assert set(self.goal_list).issubset(set(self.goals["GOAL_HANDLERS"].keys()))
 
         self.audio = audio
         self.display = display
@@ -129,7 +142,7 @@ class X(object):
         else:
             self.goal = None
         if self.hello:
-            self("hey")
+            self("hey")  # call w/o utterance to get the goal right away
 
     def get_next_goal(self) -> str:
         """Returns the next goal. Calls a function in each of the goal modules
@@ -137,19 +150,10 @@ class X(object):
         if self.fixed_goal:
             return self.goal
 
-        # TODO make this configurable
-        goal_list = [
-            "health_history",
-            "insomnia_severity_index",
-            "diary_probe",
-            "daily_routine",
-        ]
-        goal = ""
-        for goal_ in goal_list:
-            if self.goals["GOAL_HANDLERS"][goal_]():
-                goal = goal_
-                break
-
+        goal = next(
+            (goal_ for goal_ in self.goal_list if self.goals["GOAL_HANDLERS"][goal_]()),
+            "",
+        )
         print(f"X.get_next_goal {goal=}")
         return goal
 
@@ -177,17 +181,21 @@ class X(object):
             set_goal_refused(self.goal)
 
     def add_user_to_memory(self) -> None:
-        if self.add_user:
-            self.memory.chat_memory.add_ai_message("what's your name?")
+        """Add the user to memory if they haven't already been added."""
+        if self.add_user and not find_human_messages(
+            self.memory.chat_memory.messages,
+            [SLEEPMATE_NAME_QUESTION, SLEEPMATE_EMAIL_QUESTION],
+        ):
+            self.memory.chat_memory.add_ai_message(SLEEPMATE_NAME_QUESTION)
             self.memory.chat_memory.add_user_message(self.db_user.name)
-            self.memory.chat_memory.add_ai_message("what's your email?")
+            self.memory.chat_memory.add_ai_message(SLEEPMATE_EMAIL_QUESTION)
             self.memory.chat_memory.add_user_message(self.db_user.email)
-            # TODO what happens when this falls off the end of the chat history?
-            self.add_user = False
 
-    def __call__(self, utterance: str, save: bool = True) -> bool:
+    def __call__(self, utterance: str = "", save: bool = True) -> bool:
         self.goal_refused = False
         goal = self.get_next_goal()
+        if not utterance:
+            utterance = goal
         if goal != self.goal:
             # print(f"X.__call__ {goal=}")
             self.goal = goal
@@ -198,15 +206,19 @@ class X(object):
         if self.audio:
             play(output)
         if save:
-            self.save_memory()
+            self.save_memory_()
         if self.display:
             display_markdown(output)
         return output
 
-    def save_memory(self, filename: str = SLEEPMATE_MEMORY_PATH) -> None:
+    def save_memory_(self):
+        return X.save_memory(self.memory)
+
+    @staticmethod
+    def save_memory(memory, filename: str = SLEEPMATE_MEMORY_PATH) -> None:
         # print(f"save_memory {filename=}")
         with open(filename, "wb") as f:
-            pickle.dump(self.agent_executor.memory, f)
+            pickle.dump(memory, f)
 
     @staticmethod
     def load_memory(

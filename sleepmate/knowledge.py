@@ -1,3 +1,4 @@
+from datetime import datetime
 from pathlib import Path
 
 import tiktoken
@@ -10,7 +11,9 @@ from langchain.prompts import (
     HumanMessagePromptTemplate,
     SystemMessagePromptTemplate,
 )
+from langchain.pydantic_v1 import BaseModel, Field, validator
 from langchain.vectorstores import Chroma
+from mongoengine import ReferenceField
 
 from .config import (
     SLEEPMATE_DATADIR,
@@ -18,9 +21,46 @@ from .config import (
     SLEEPMATE_MAX_TOKENS,
 )
 from .goal import goal_refused
+from .helpful_scripts import get_date_fields, mongo_to_json, parse_date, set_attribute
 from .mi import get_completion
+from .structured import fix_schema, pydantic_to_mongoengine
+from .user import DBUser, get_current_user
 
-max_tokens = 8192
+
+class DailyRoutineSeen(BaseModel):
+    date: datetime = Field(description="date of entry", default=datetime.now())
+
+
+DBDailyRoutineSeen = pydantic_to_mongoengine(
+    DailyRoutineSeen, extra_fields={"user": ReferenceField(DBUser, required=True)}
+)
+
+
+def save_daily_routine_seen_to_db(
+    user: DBUser, entry: DailyRoutineSeen
+) -> DBDailyRoutineSeen:
+    # delete any existing entries for this date
+    DBDailyRoutineSeen.objects(user=user).delete()
+    # save the new entry
+    return DBDailyRoutineSeen(**{"user": user, **entry}).save()
+
+
+@set_attribute("return_direct", False)
+def get_daily_routine_seen(memory: ReadOnlySharedMemory, goal: str, utterance: str):
+    """Returns True if the human has already seen the daily routine."""
+    db_entry = DBDailyRoutineSeen.objects(user=get_current_user()).first()
+    if db_entry is None:
+        return f"The human hasn't seen the daily routine yet."
+    return mongo_to_json(db_entry.to_mongo().to_dict())
+
+
+@set_attribute("return_direct", False)
+def save_daily_routine_seen(memory: ReadOnlySharedMemory, goal: str, text: str):
+    """Saves a record of the human having seen the daily routine to the database."""
+    entry = DailyRoutineSeen(date=datetime.now()).dict()
+    print(f"save {entry=}")
+    save_daily_routine_seen_to_db(get_current_user(), entry)
+
 
 GOALS = [
     {
@@ -31,15 +71,18 @@ GOALS = [
         "daily_routine": """
         Your goal is to help the human identify a daily routine that will help
         them sleep better. Ask them if they're open to hearing about a daily
-        routine. If they say yes, then run the get_knowledge_answer tool with
-        the query `daily routine`.
-        """,
+        routine. If they say yes, record a record of them having seen the
+        routine then run the get_knowledge_answer tool with the query `daily
+        routine`.""",
     }
 ]
 
 
 def daily_routine():
-    return not goal_refused("daily_routine")
+    return (
+        not goal_refused("daily_routine")
+        and DBDailyRoutineSeen.objects(user=get_current_user()).count() == 0
+    )
 
 
 GOAL_HANDLERS = [
@@ -134,4 +177,4 @@ def get_knowledge_answer(
     return get_completion(memory, utterance, prompt)
 
 
-TOOLS = [get_knowledge_answer]
+TOOLS = [get_knowledge_answer, get_daily_routine_seen, save_daily_routine_seen]

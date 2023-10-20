@@ -100,9 +100,7 @@ def save_sleep_diary_entry_to_db(
     entry = adjust_to_baseline_date(entry.dict())
     # delete any existing entries for this date
     (start, end) = get_start_end(entry["date"])
-    DBSleepDiaryEntry.objects(
-        user=get_current_user(), date__gte=start, date__lte=end
-    ).delete()
+    DBSleepDiaryEntry.objects(user=user, date__gte=start, date__lte=end).delete()
     # save the new entry
     return DBSleepDiaryEntry(**{"user": user, **entry}).save()
 
@@ -157,13 +155,12 @@ def get_date_sleep_diary_entry(memory: ReadOnlySharedMemory, goal: str, utteranc
     return get_json_diary_entry(db_entry.to_mongo().to_dict())
 
 
-def diary_probe():
-    """Returns True if a Health History should happen."""
-    (start, end) = get_start_end()
-    if goal_refused("diary_probe", start, end):
-        return False
+def diary_entry():
+    """Returns True if it's time to ask the human to record a sleep diary
+    entry."""
+    (start, end) = get_start_end(datetime.now() - timedelta(days=1))
 
-    return (
+    return goal_refused("diary_entry", start, end) or (
         DBSleepDiaryEntry.objects(
             user=get_current_user(), date__gte=start, date__lte=end
         ).count()
@@ -173,7 +170,7 @@ def diary_probe():
 
 GOAL_HANDLERS = [
     {
-        "diary_probe": diary_probe,
+        "diary_entry": diary_entry,
     },
 ]
 
@@ -187,13 +184,6 @@ anything over 85%% is considered normal.
 """
 
 GOALS = [
-    {
-        "diary_probe": """
-        Your goal is find out if the human has ever kept a sleep diary. If they
-        haven't kept a sleep diary, ask if they'd like the AI to help them keep
-        one. If they have, ask if they'd like to share it with the AI.
-        """,
-    },
     {
         "diary_entry_retrieval": f"""
         Your goal is to summarise a sleep diary entry for a given date as a

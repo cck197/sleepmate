@@ -8,6 +8,15 @@ from typing import List
 from dateutil.parser import ParserError
 from dateutil.parser import parse as date_parser
 from IPython.display import Markdown, display
+from langchain.prompts import (
+    ChatPromptTemplate,
+    HumanMessagePromptTemplate,
+    MessagesPlaceholder,
+    SystemMessagePromptTemplate,
+)
+from langchain.schema import AIMessage, HumanMessage
+
+from .config import SLEEPMATE_STOP_SEQUENCE, SLEEPMATE_SYSTEM_DESCRIPTION
 
 
 def display_markdown(text: str) -> None:
@@ -110,16 +119,6 @@ def get_start_end(date: datetime = None) -> (datetime, datetime):
     )
 
 
-from langchain.prompts import (
-    ChatPromptTemplate,
-    HumanMessagePromptTemplate,
-    MessagesPlaceholder,
-    SystemMessagePromptTemplate,
-)
-
-from .config import SLEEPMATE_STOP_SEQUENCE, SLEEPMATE_SYSTEM_DESCRIPTION
-
-
 def get_system_prompt(
     goal: str = "",
     stop_sequence: str = SLEEPMATE_STOP_SEQUENCE,
@@ -128,7 +127,7 @@ def get_system_prompt(
     if goal:
         system = (
             f"{system}\n{goal}\n"
-            "Don't ask the human how you can assist them. "
+            "Very important! Don't ask the human how you can assist them. "
             "Instead, get to the goal as quickly as possible.\n"
         )
         if stop_sequence:
@@ -150,3 +149,16 @@ def get_template(goal: str, prompt: str) -> ChatPromptTemplate:
             HumanMessagePromptTemplate.from_template("{input}"),
         ]
     )
+
+
+def find_human_messages(messages, queries):
+    """Find the human messages that follow the given queries."""
+    # queries = ["what's your name?", "what's your email?"]
+    results = {}
+    for query in queries:
+        for i, msg in enumerate(messages):
+            if isinstance(msg, AIMessage) and msg.content == query:
+                if i + 1 < len(messages) and isinstance(messages[i + 1], HumanMessage):
+                    results[query] = messages[i + 1].content
+                    break
+    return results
