@@ -6,7 +6,13 @@ from langchain.pydantic_v1 import BaseModel, Field, validator
 from langchain.schema import BaseMemory
 from mongoengine import ReferenceField
 
-from .helpful_scripts import get_date_fields, mongo_to_json, set_attribute
+from .goal import goal_refused
+from .helpful_scripts import (
+    get_date_fields,
+    get_start_end,
+    mongo_to_json,
+    set_attribute,
+)
 from .structured import (
     create_from_positional_args,
     fix_schema,
@@ -176,14 +182,37 @@ def get_seeds_diary_entry(memory: ReadOnlySharedMemory, goal: str, utterance: st
         return get_json_seeds(entry)
 
 
+def seeds_entry():
+    (start, end) = get_start_end()
+    return not goal_refused("seeds_entry", start, end) and (
+        DBSeedsDiaryEntry.objects(
+            pod=get_current_seed_pod(), date__gte=start, date__lte=end
+        ).count()
+        == 0
+    )
+
+
+def seeds_probe():
+    return (
+        not goal_refused("seeds_entry")
+        and DBSeedPod.objects(user=get_current_user()).count() == 0
+    )
+
+
+GOAL_HANDLERS = [
+    {
+        "seeds_probe": seeds_probe,
+        "seeds_entry": seeds_entry,
+    },
+]
+
 GOALS = [
     {
         "seeds_probe": """
         Your goal is to ask the human to do the SEEDS exercise created by Simon
-        Marshall, PhD. Summarise the exercise using the text below surrounded by
-        triple backticks.
-
-        ```   
+        Marshall, PhD. Explain briefly what's involved and then ask if they'd
+        like to know more. Then summarise the exercise using the following:
+        
         The pillars of good health are Sleep, Exercise, Eating, Drinking, and
         Stress management (SEEDS). Yes, "SEEDS" is cheesy as fuck, but the
         metaphor of planting small SEEDS (i.e., behaviors that are good for you)
@@ -220,7 +249,6 @@ GOALS = [
         Traffic Light system to avoid catastrophizing, awfulizing, and
         why-can't-I-do this-izing, when life gets in the way (because it will).
         We need to give ourselves permission to occasionally suck at adulting.
-        ```
 
         Before collecting SEEDS from the human, give some examples:
         - Be in bed by 9.30 pm.
@@ -245,7 +273,7 @@ GOALS = [
     },
     {
         "seeds_entry": """
-        Your goals to ask the human about what SEEDS they managed to do today.
+        Your goal is to ask the human about what SEEDS they managed to do today.
         First, ask if now is a good time to record a SEEDS diary entry.
         Summarise the SEEDS they gave earlier. Ask what date the entry is for,
         get today's date and suggest that as a default. Then, for each SEED in

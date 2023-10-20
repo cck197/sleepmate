@@ -39,13 +39,14 @@ def fix_schema(cls, date_fields):
     return s
 
 
-def get_memory_tail(
-    memory: BaseMemory, k: int = 10, memory_key: str = "chat_history"
-) -> BaseMemory:
-    """Get the last k messages from memory."""
-    new = ConversationBufferWindowMemory(k=k, memory_key=memory_key)
-    new.chat_memory.messages = memory.memory.chat_memory.messages[-new.k * 2 :]
-    return new
+# possibly buggy efficiency hack
+# def get_memory_tail(
+#     memory: BaseMemory, k: int = 10, memory_key: str = "chat_history"
+# ) -> BaseMemory:
+#     """Get the last k messages from memory."""
+#     new = ConversationBufferWindowMemory(k=k, memory_key=memory_key)
+#     new.chat_memory.messages = memory.memory.chat_memory.messages[-new.k * 2 :]
+#     return new
 
 
 def create_from_positional_args(model_cls, text: str):
@@ -59,9 +60,7 @@ def create_from_positional_args(model_cls, text: str):
     return model_cls(**kwargs)
 
 
-def get_parsed_output(
-    query: str, memory: BaseMemory, cls: BaseModel, k: int = 10
-) -> BaseModel:
+def get_parsed_output(query: str, memory: BaseMemory, cls: BaseModel) -> BaseModel:
     """Get the parsed output from chat_history"""
     # Set up a parser + inject instructions into the prompt template.
     parser = PydanticOutputParser(pydantic_object=cls)
@@ -74,7 +73,7 @@ def get_parsed_output(
     )
     # llm = OpenAI(model_name=model_name, temperature=0.0)
     llm = ChatOpenAI(model_name=SLEEPMATE_PARSER_MODEL_NAME, temperature=0.0)
-    chain = LLMChain(llm=llm, prompt=prompt, memory=get_memory_tail(memory, k=k))
+    chain = LLMChain(llm=llm, prompt=prompt, memory=memory)
     output = chain({"query": query})
     return parser.parse(output["text"])
 

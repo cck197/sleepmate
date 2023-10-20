@@ -6,6 +6,7 @@ from langchain.pydantic_v1 import BaseModel, Field, validator
 from langchain.schema import BaseMemory
 from mongoengine import ReferenceField
 
+from .goal import goal_refused
 from .helpful_scripts import get_date_fields, mongo_to_json, set_attribute
 from .structured import fix_schema, get_parsed_output, pydantic_to_mongoengine
 from .user import DBUser, get_current_user
@@ -74,13 +75,25 @@ def get_stress_audit(memory: ReadOnlySharedMemory, goal: str, utterance: str):
         return get_json_stress_audit(entry.to_mongo().to_dict())
 
 
+def stress_audit():
+    return (
+        not goal_refused("stress_audit")
+        and DBStressAudit.objects(user=get_current_user()).count() == 0
+    )
+
+
+GOAL_HANDLERS = [
+    {
+        "stress_audit": stress_audit,
+    },
+]
+
 GOALS = [
     {
         "stress_audit": """
         Your goals is to help the human conduct a stress audit. created by Simon
-        Marshall, PhD. Summarise the exercise using the text below surrounded by
-        triple backticks.
-        ```
+        Marshall, PhD. Summarise the exercise described below.
+
         Coping is the purposeful ability to manage SENSATIONS, PERCEPTIONS,
         EMOTIONS, THOUGHTS & ACTIONS in response to your body's hard-wired
         neurochemical pathways (the "stress response") to DEMANDS placed on it.
@@ -151,7 +164,6 @@ GOALS = [
         balanced list. They make use of BOTH problem and emotion-focused coping
         behaviours. They also tend to have more adaptive behaviours than
         maladaptive.
-        ```
 
         Explain the purpose of the exercise, and walk the human through it, step
         by step. Once they are done listing stress-coping behaviours, categorise

@@ -108,6 +108,9 @@ class X(object):
         "insomnia_severity_index",
         "diary_entry",
         "daily_routine",
+        "stress_audit",
+        "seeds_probe",
+        "seeds_entry",
     ]
 
     def __init__(
@@ -115,7 +118,7 @@ class X(object):
         goal: str = "",
         audio: bool = False,
         display: bool = True,
-        hello: bool = True,
+        hello: str = None,
         add_user: bool = True,
         email: str = None,
         goal_list: List[str] = None,
@@ -130,7 +133,6 @@ class X(object):
 
         self.audio = audio
         self.display = display
-        self.hello = hello
         self.add_user = add_user
         self.db_user = get_user_from_email(email)
         self.goal_refused = False
@@ -141,8 +143,7 @@ class X(object):
             self.set_agent()
         else:
             self.goal = None
-        if self.hello:
-            self("hey")  # call w/o utterance to get the goal right away
+        self.say(hello)
 
     def get_next_goal(self) -> str:
         """Returns the next goal. Calls a function in each of the goal modules
@@ -157,11 +158,14 @@ class X(object):
         print(f"X.get_next_goal {goal=}")
         return goal
 
-    def set_agent(self):
+    def load_memory_(self):
         if self.memory is None:
             self.memory = X.load_memory()
             self.ro_memory = ReadOnlySharedMemory(memory=self.memory)
             self.add_user_to_memory()
+
+    def set_agent(self):
+        self.load_memory_()
 
         # the model is fine tuned for selecting a function
         # sampling temperature is set to 0 (no sampling)
@@ -191,7 +195,10 @@ class X(object):
             self.memory.chat_memory.add_ai_message(SLEEPMATE_EMAIL_QUESTION)
             self.memory.chat_memory.add_user_message(self.db_user.email)
 
-    def __call__(self, utterance: str = "", save: bool = True) -> bool:
+    def __call__(self, *args, **kwargs) -> bool:
+        return self.say(*args, **kwargs)
+
+    def say(self, utterance: str = "", save: bool = True) -> bool:
         self.goal_refused = False
         goal = self.get_next_goal()
         if not utterance:
