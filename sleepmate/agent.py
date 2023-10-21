@@ -1,7 +1,5 @@
-import pickle
 from datetime import date
 from functools import partial
-from pathlib import Path
 from typing import Any, Dict, List, Tuple, Union
 
 from langchain.agents import AgentExecutor, OpenAIFunctionsAgent
@@ -41,7 +39,7 @@ from .helpful_scripts import (
     import_attrs,
     json_dumps,
 )
-from .user import get_user_from_email
+from .user import get_current_user, get_user_from_email
 
 GOALS = [
     {
@@ -157,6 +155,7 @@ class X(object):
             self.set_agent()
         else:
             self.goal = None
+        self.load_memory()
         self.say(hello)
 
     def get_next_goal(self) -> str:
@@ -171,15 +170,7 @@ class X(object):
         )
         return goal
 
-    def load_memory_(self):
-        if self.memory is None:
-            self.memory = X.load_memory()
-            self.ro_memory = ReadOnlySharedMemory(memory=self.memory)
-            self.add_user_to_memory()
-
     def set_agent(self):
-        self.load_memory_()
-
         # the model is fine tuned for selecting a function
         # sampling temperature is set to 0 (no sampling)
         goal = self.goals["GOALS"][self.goal] if self.goal else None
@@ -230,12 +221,12 @@ class X(object):
             display_markdown(output)
         return output
 
-    @staticmethod
     def load_memory(
+        self,
         k: int = 30,
         memory_key: str = "chat_history",
-    ) -> ConversationBufferWindowMemory:
-        return ConversationBufferWindowMemory(
+    ) -> None:
+        self.memory = ConversationBufferWindowMemory(
             llm=ChatOpenAI(
                 temperature=SLEEPMATE_SAMPLING_TEMPERATURE,
                 model_name=SLEEPMATE_DEFAULT_MODEL_NAME,
@@ -245,10 +236,12 @@ class X(object):
             k=k,
             chat_memory=MongoDBChatMessageHistory(
                 SLEEPMATE_MONGODB_CONNECTION_STRING,
-                "test-session",
+                self.db_user.id,
                 database_name=SLEEPMATE_MONGODB_NAME,
             ),
         )
+        self.ro_memory = ReadOnlySharedMemory(memory=self.memory)
+        self.add_user_to_memory()
 
 
 def get_agent_prompt(
