@@ -112,6 +112,9 @@ class X(object):
         "stress_audit",
         "seeds_probe",
         "seeds_entry",
+        "open_focus",
+        "leaves_on_a_stream",
+        "valued_living",
     ]
 
     def __init__(
@@ -156,7 +159,6 @@ class X(object):
             (goal_ for goal_ in self.goal_list if self.goals["GOAL_HANDLERS"][goal_]()),
             "",
         )
-        print(f"X.get_next_goal {goal=}")
         return goal
 
     def load_memory_(self):
@@ -205,6 +207,7 @@ class X(object):
         if not utterance:
             utterance = goal
         if goal != self.goal:
+            print(f"X.say {self.goal} -> {goal}")
             # print(f"X.__call__ {goal=}")
             self.goal = goal
             self.set_agent()

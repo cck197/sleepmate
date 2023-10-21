@@ -1,4 +1,5 @@
 import json
+from copy import deepcopy
 from datetime import datetime
 from typing import List, Tuple
 
@@ -8,7 +9,7 @@ from langchain.chat_models import ChatOpenAI
 # kinda almost works with davinci
 # model_name = "text-davinci-003"
 # from langchain.llms import OpenAI
-from langchain.memory import ConversationBufferWindowMemory
+from langchain.memory import ReadOnlySharedMemory
 from langchain.output_parsers import PydanticOutputParser
 from langchain.prompts import PromptTemplate
 from langchain.pydantic_v1 import BaseModel
@@ -49,6 +50,12 @@ def fix_schema(cls, date_fields):
 #     return new
 
 
+def get_memory(memory: ReadOnlySharedMemory) -> ReadOnlySharedMemory:
+    memory = deepcopy(memory)
+    memory.memory.return_messages = False
+    return memory
+
+
 def create_from_positional_args(model_cls, text: str):
     """Create a pydantic model from positional args."""
     try:
@@ -60,7 +67,9 @@ def create_from_positional_args(model_cls, text: str):
     return model_cls(**kwargs)
 
 
-def get_parsed_output(query: str, memory: BaseMemory, cls: BaseModel) -> BaseModel:
+def get_parsed_output(
+    query: str, memory: ReadOnlySharedMemory, cls: BaseModel
+) -> BaseModel:
     """Get the parsed output from chat_history"""
     # Set up a parser + inject instructions into the prompt template.
     parser = PydanticOutputParser(pydantic_object=cls)
@@ -73,7 +82,7 @@ def get_parsed_output(query: str, memory: BaseMemory, cls: BaseModel) -> BaseMod
     )
     # llm = OpenAI(model_name=model_name, temperature=0.0)
     llm = ChatOpenAI(model_name=SLEEPMATE_PARSER_MODEL_NAME, temperature=0.0)
-    chain = LLMChain(llm=llm, prompt=prompt, memory=memory)
+    chain = LLMChain(llm=llm, prompt=prompt, memory=get_memory(memory))
     output = chain({"query": query})
     return parser.parse(output["text"])
 

@@ -132,10 +132,14 @@ def get_system_prompt(
         )
         if stop_sequence:
             system = (
-                f"{system}\nIf the human refuses the goal, "
+                f"{system}\nIf and only if the human refuses the goal, "
                 "output a listening statement followed by "
                 f"{stop_sequence} to end the conversation."
             )
+        system = (
+            f"{system}\nWhen the goal is achieved, ask the human to "
+            "let you know when they're ready to continue on their health journey."
+        )
     return system
 
 
