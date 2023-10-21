@@ -67,14 +67,18 @@ GOALS = [
         
         Only if they say they do anything other than sleep, ask them if they're
         open to hearing about Stimulus Control Therapy as described by Richard
-        R.  Bootzin.
+        R. Bootzin.
         
-        Only if they say yes, summarise the therapy and ask them if they're
-        willing to try it. Summarise the rationale for the therapy and the
-        instructions for implementing it.
+        Summarise the rationale for the therapy and the instructions for
+        implementing it. Ask them if they're willing to try it.
+
+        Always record a record of them having seen Stimulus Control Therapy in
+        the database.
         
         If they agree to try it, explain you'll help them get it done using the
         SEEDS exercise later.
         """
     }
 ]
+
+TOOLS = [get_stimulus_control_seen, save_stimulus_control_seen]

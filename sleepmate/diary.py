@@ -160,7 +160,7 @@ def diary_entry():
     entry."""
     (start, end) = get_start_end(datetime.now() - timedelta(days=1))
 
-    return goal_refused("diary_entry", start, end) or (
+    return not goal_refused("diary_entry", start, end) and (
         DBSleepDiaryEntry.objects(
             user=get_current_user(), date__gte=start, date__lte=end
         ).count()
@@ -236,7 +236,7 @@ def get_sleep_diary_description(
         get_template(
             goal,
             get_sleep_diary_description.__doc__
-            + GOALS[0]["diary_probe"]
+            + GOALS[1]["diary_entry"]
             + "End by asking if they'd like the AI to help them keep a sleep diary.",
         ),
     )
