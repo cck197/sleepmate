@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Tuple
 
 from langchain.memory import ReadOnlySharedMemory
@@ -6,8 +6,10 @@ from langchain.pydantic_v1 import BaseModel, Field, validator
 from langchain.schema import BaseMemory
 from mongoengine import ReferenceField
 
+from .goal import goal_refused
 from .helpful_scripts import (
     get_date_fields,
+    get_start_end,
     json_dumps,
     mongo_to_json,
     parse_date,
@@ -199,9 +201,38 @@ with the following fields:
 - name of the exercise
 - how the human was feeling before and after the exercise.
 
-Finally, after the summary ask the human if they'd like to save the record of
-exercise to the database. Only after they've confirmed, save the entry. 
+Finally, after the summary, save the record of exercise to the database.
 """
+
+
+def exercise_time(name):
+    start = datetime.now() - timedelta(days=5)
+    return (
+        not goal_refused(name)
+        and DBExerciseEntry.objects(
+            name__icontains=name.replace("_", " "),
+            user=get_current_user(),
+            date__gte=start,
+        ).count()
+        == 0
+    )
+
+
+def valued_living():
+    start = datetime.now() - timedelta(days=5)
+
+    return not goal_refused("valued_living") and (
+        DBVLQEntry.objects(user=get_current_user(), date__gte=start).count() == 0
+    )
+
+
+GOAL_HANDLERS = [
+    {
+        "open_focus": lambda: exercise_time("open_focus"),
+        "leaves_on_a_stream": lambda: exercise_time("leaves_on_a_stream"),
+        "valued_living": valued_living,
+    },
+]
 
 GOALS = [
     {
