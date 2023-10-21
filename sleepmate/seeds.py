@@ -252,6 +252,9 @@ GOALS = [
 
         Before collecting SEEDS from the human, give some examples:
         - Be in bed by 9.30 pm.
+        - Go to bed *only* when sleepy.
+        - Set an alarm and get up at the same time every day.
+        - Go for 2 min walk when you feel the need for a nap.
         - Turn off my cell phone by 8 pm.
         - Walk outside for 10 ten minutes before 9:30 am.
         - Do 10 push-ups while the coffee is brewing.

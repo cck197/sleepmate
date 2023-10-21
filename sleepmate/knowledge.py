@@ -11,7 +11,7 @@ from langchain.prompts import (
     HumanMessagePromptTemplate,
     SystemMessagePromptTemplate,
 )
-from langchain.pydantic_v1 import BaseModel, Field, validator
+from langchain.pydantic_v1 import BaseModel, Field
 from langchain.vectorstores import Chroma
 from mongoengine import ReferenceField
 
@@ -21,9 +21,9 @@ from .config import (
     SLEEPMATE_MAX_TOKENS,
 )
 from .goal import goal_refused
-from .helpful_scripts import get_date_fields, mongo_to_json, parse_date, set_attribute
+from .helpful_scripts import mongo_to_json, set_attribute
 from .mi import get_completion
-from .structured import fix_schema, pydantic_to_mongoengine
+from .structured import pydantic_to_mongoengine
 from .user import DBUser, get_current_user
 
 
@@ -58,7 +58,7 @@ def get_daily_routine_seen(memory: ReadOnlySharedMemory, goal: str, utterance: s
 def save_daily_routine_seen(memory: ReadOnlySharedMemory, goal: str, text: str):
     """Saves a record of the human having seen the daily routine to the database."""
     entry = DailyRoutineSeen(date=datetime.now()).dict()
-    print(f"save {entry=}")
+    print(f"save_daily_routine_seen {entry=}")
     save_daily_routine_seen_to_db(get_current_user(), entry)
 
 

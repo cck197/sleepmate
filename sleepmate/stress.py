@@ -173,6 +173,9 @@ GOALS = [
         that might help balance the list. Give examples. 
         
         Only after they've confirmed, save the Stress Audit to the database.
+
+        Explain you can help them try some new stress coping behaviours using
+        the SEEDS exercise later.
         """
     }
 ]

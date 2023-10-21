@@ -108,6 +108,7 @@ class X(object):
         "insomnia_severity_index",
         "diary_entry",
         "daily_routine",
+        "stimulus_control",
         "stress_audit",
         "seeds_probe",
         "seeds_entry",
@@ -138,7 +139,7 @@ class X(object):
         self.goal_refused = False
         self.stop_handler = GoalRefusedHandler(self.set_goal_refused)
         if goal:
-            self.goal = self.goals["GOALS"][goal]
+            self.goal = goal
             self.fixed_goal = True
             self.set_agent()
         else:

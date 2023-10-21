@@ -1,0 +1,80 @@
+from datetime import datetime
+
+from langchain.memory import ReadOnlySharedMemory
+from langchain.pydantic_v1 import BaseModel, Field
+from mongoengine import ReferenceField
+
+from .goal import goal_refused
+from .helpful_scripts import mongo_to_json, set_attribute
+from .structured import pydantic_to_mongoengine
+from .user import DBUser, get_current_user
+
+
+class StimulusControlSeen(BaseModel):
+    date: datetime = Field(description="date of entry", default=datetime.now())
+
+
+DBStimulusControlSeen = pydantic_to_mongoengine(
+    StimulusControlSeen, extra_fields={"user": ReferenceField(DBUser, required=True)}
+)
+
+
+def save_stimulus_control_seen_to_db(
+    user: DBUser, entry: StimulusControlSeen
+) -> DBStimulusControlSeen:
+    # delete any existing entries for this date
+    DBStimulusControlSeen.objects(user=user).delete()
+    # save the new entry
+    return DBStimulusControlSeen(**{"user": user, **entry}).save()
+
+
+@set_attribute("return_direct", False)
+def get_stimulus_control_seen(memory: ReadOnlySharedMemory, goal: str, utterance: str):
+    """Returns True if the human has already seen the Stimulus Control Therapy
+    instructions."""
+    db_entry = DBStimulusControlSeen.objects(user=get_current_user()).first()
+    if db_entry is None:
+        return f"The human hasn't seen the stimulus control yet."
+    return mongo_to_json(db_entry.to_mongo().to_dict())
+
+
+@set_attribute("return_direct", False)
+def save_stimulus_control_seen(memory: ReadOnlySharedMemory, goal: str, text: str):
+    """Saves a record of the human having seen the Stimulus Control Therapy
+    Instructions to the database."""
+    entry = StimulusControlSeen(date=datetime.now()).dict()
+    print(f"save_stimulus_control_seen {entry=}")
+    save_stimulus_control_seen_to_db(get_current_user(), entry)
+
+
+def stimulus_control():
+    return (
+        not goal_refused("stimulus_control")
+        and DBStimulusControlSeen.objects(user=get_current_user()).count() == 0
+    )
+
+
+GOAL_HANDLERS = [
+    {
+        "stimulus_control": stimulus_control,
+    },
+]
+
+GOALS = [
+    {
+        "stimulus_control": """
+        Your goal is to ask the human what they do in bed other than sleep.
+        
+        Only if they say they do anything other than sleep, ask them if they're
+        open to hearing about Stimulus Control Therapy as described by Richard
+        R.  Bootzin.
+        
+        Only if they say yes, summarise the therapy and ask them if they're
+        willing to try it. Summarise the rationale for the therapy and the
+        instructions for implementing it.
+        
+        If they agree to try it, explain you'll help them get it done using the
+        SEEDS exercise later.
+        """
+    }
+]
