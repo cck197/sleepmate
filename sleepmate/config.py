@@ -2,7 +2,6 @@ import os
 
 # MAX_TOKENS = 8192
 SLEEPMATE_SAMPLING_TEMPERATURE = os.environ.get("SLEEPMATE_SAMPLING_TEMPERATURE", 0)
-SLEEPMATE_MEMORY_PATH = os.environ.get("SLEEPMATE_MEMORY_PATH")
 # unfortunately, gpt-3.5-turbo just won't cut it
 SLEEPMATE_DEFAULT_MODEL_NAME = os.environ.get("SLEEPMATE_DEFAULT_MODEL_NAME", "gpt-4")
 # for parsing output in memory to a JSON object
@@ -21,6 +20,13 @@ if DEBUG:
     import langchain
 
     langchain.verbose = True  # langchain.debug = True
+
+SLEEPMATE_MONGODB_HOST = os.environ.get("SLEEPMATE_MONGODB_HOST", "localhost")
+SLEEPMATE_MONGODB_NAME = os.environ.get("SLEEPMATE_MONGODB_NAME", "sleepmate")
+SLEEPMATE_MONGODB_PORT = os.environ.get("SLEEPMATE_MONGODB_PORT", 27017)
+SLEEPMATE_MONGODB_CONNECTION_STRING = (
+    f"mongodb://{SLEEPMATE_MONGODB_HOST}:{SLEEPMATE_MONGODB_PORT}/"
+)
 
 SLEEPMATE_SYSTEM_DESCRIPTION = """
 You are a somewhat lighthearted AI clinician skilled in Motivational

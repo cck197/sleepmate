@@ -7,7 +7,11 @@ from typing import Any, Dict, List, Tuple, Union
 from langchain.agents import AgentExecutor, OpenAIFunctionsAgent
 from langchain.callbacks.base import BaseCallbackHandler
 from langchain.chat_models import ChatOpenAI
-from langchain.memory import ConversationBufferWindowMemory, ReadOnlySharedMemory
+from langchain.memory import (
+    ConversationBufferWindowMemory,
+    MongoDBChatMessageHistory,
+    ReadOnlySharedMemory,
+)
 from langchain.prompts import (
     ChatPromptTemplate,
     HumanMessagePromptTemplate,
@@ -22,7 +26,7 @@ from .config import (
     SLEEPMATE_AGENT_MODEL_NAME,
     SLEEPMATE_DEFAULT_MODEL_NAME,
     SLEEPMATE_EMAIL_QUESTION,
-    SLEEPMATE_MEMORY_PATH,
+    SLEEPMATE_MONGODB_CONNECTION_STRING,
     SLEEPMATE_NAME_QUESTION,
     SLEEPMATE_SAMPLING_TEMPERATURE,
     SLEEPMATE_STOP_SEQUENCE,
@@ -100,6 +104,12 @@ class GoalRefusedHandler(BaseCallbackHandler):
         # print(f"on_agent_finish {action}")
         if SLEEPMATE_STOP_SEQUENCE in action.return_values["output"]:
             self.callback(action)
+
+
+def get_chat_memory():
+    return ConversationBufferWindowMemory(
+        k=k,
+    )
 
 
 class X(object):
@@ -216,31 +226,15 @@ class X(object):
         # print(output)
         if self.audio:
             play(output)
-        if save:
-            self.save_memory_()
         if self.display:
             display_markdown(output)
         return output
 
-    def save_memory_(self):
-        return X.save_memory(self.memory)
-
-    @staticmethod
-    def save_memory(memory, filename: str = SLEEPMATE_MEMORY_PATH) -> None:
-        # print(f"save_memory {filename=}")
-        with open(filename, "wb") as f:
-            pickle.dump(memory, f)
-
     @staticmethod
     def load_memory(
-        filename: str = SLEEPMATE_MEMORY_PATH,
         k: int = 30,
         memory_key: str = "chat_history",
     ) -> ConversationBufferWindowMemory:
-        if Path(filename).exists():
-            print(f"X.load_memory {filename=}")
-            with open(filename, "rb") as f:
-                return pickle.load(f)
         return ConversationBufferWindowMemory(
             llm=ChatOpenAI(
                 temperature=SLEEPMATE_SAMPLING_TEMPERATURE,
@@ -249,6 +243,11 @@ class X(object):
             memory_key=memory_key,
             return_messages=True,
             k=k,
+            chat_memory=MongoDBChatMessageHistory(
+                SLEEPMATE_MONGODB_CONNECTION_STRING,
+                "test-session",
+                database_name=SLEEPMATE_MONGODB_NAME,
+            ),
         )
 
 
