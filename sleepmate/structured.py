@@ -13,7 +13,7 @@ from langchain.memory import ReadOnlySharedMemory
 from langchain.output_parsers import PydanticOutputParser
 from langchain.prompts import PromptTemplate
 from langchain.pydantic_v1 import BaseModel
-from langchain.schema import BaseMemory
+from langchain.schema import OutputParserException
 from mongoengine import (
     BooleanField,
     DateTimeField,
@@ -38,22 +38,6 @@ def fix_schema(cls, date_fields):
         except KeyError:
             pass
     return s
-
-
-# possibly buggy efficiency hack
-# def get_memory_tail(
-#     memory: BaseMemory, k: int = 10, memory_key: str = "chat_history"
-# ) -> BaseMemory:
-#     """Get the last k messages from memory."""
-#     new = ConversationBufferWindowMemory(k=k, memory_key=memory_key)
-#     new.chat_memory.messages = memory.memory.chat_memory.messages[-new.k * 2 :]
-#     return new
-
-
-def get_memory(memory: ReadOnlySharedMemory) -> ReadOnlySharedMemory:
-    memory = deepcopy(memory)
-    memory.memory.return_messages = False
-    return memory
 
 
 def create_from_positional_args(model_cls, text: str):
@@ -82,9 +66,18 @@ def get_parsed_output(
     )
     # llm = OpenAI(model_name=model_name, temperature=0.0)
     llm = ChatOpenAI(model_name=SLEEPMATE_PARSER_MODEL_NAME, temperature=0.0)
-    chain = LLMChain(llm=llm, prompt=prompt, memory=get_memory(memory))
-    output = chain({"query": query})
-    return parser.parse(output["text"])
+    try:
+        # the prompt template expects a string, so we need to set this to False
+        return_messages = memory.memory.return_messages
+        memory.memory.return_messages = False
+        chain = LLMChain(llm=llm, prompt=prompt, memory=memory)
+        output = chain({"query": query})
+        return parser.parse(output["text"])
+    except OutputParserException as e:
+        print(f"get_parsed_output: {e=}")
+        return None
+    finally:
+        memory.memory.return_messages = return_messages
 
 
 def pydantic_to_mongoengine(pydantic_model, extra_fields=None):

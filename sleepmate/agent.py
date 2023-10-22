@@ -130,7 +130,7 @@ class X(object):
         goal: str = "",
         audio: bool = False,
         display: bool = True,
-        hello: str = None,
+        hello: str = "",
         add_user: bool = True,
         email: str = None,
         goal_list: List[str] = None,
@@ -156,7 +156,8 @@ class X(object):
         else:
             self.goal = None
         self.load_memory()
-        self.say(hello)
+        if hello is not None:
+            self.say(hello)
 
     def get_next_goal(self) -> str:
         """Returns the next goal. Calls a function in each of the goal modules

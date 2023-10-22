@@ -72,8 +72,9 @@ def save_isi_entry(memory: ReadOnlySharedMemory, goal: str, utterance: str):
     """Saves the Insomnia Severity Index entry to the database. Call *only*
     after all the Insomnia Severity Index questions have been answered."""
     entry = get_isi_entry_from_memory(memory)
-    print(f"save_isi_entry {entry=}")
-    save_isi_entry_to_db(get_current_user(), entry)
+    if entry is not None:
+        print(f"save_isi_entry {entry=}")
+        save_isi_entry_to_db(get_current_user(), entry)
 
 
 @set_attribute("return_direct", False)
@@ -170,6 +171,9 @@ GOALS = [
         8-14: Subthreshold insomnia
         15-21: Clinical insomnia (moderate severity)
         22-28: Clinical insomnia (severe)
+
+        Only once the human has confirmed correctness, save the ISI entry to the
+        database.
         """
     },
 ]

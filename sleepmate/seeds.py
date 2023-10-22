@@ -78,8 +78,9 @@ def save_seed_pod(memory: ReadOnlySharedMemory, goal: str, text: str):
     entry = create_from_positional_args(SeedPod, text)
     if entry is None:
         entry = get_seed_pod_from_memory(memory)
-    print(f"save_seed_pod {entry=}")
-    save_seed_pod_to_db(get_current_user(), entry)
+    if entry is not None:
+        print(f"save_seed_pod {entry=}")
+        save_seed_pod_to_db(get_current_user(), entry)
 
 
 def get_current_seed_pod() -> DBSeedPod:
@@ -162,8 +163,9 @@ def save_seeds_diary_entry(memory: ReadOnlySharedMemory, goal: str, text: str):
     entry = create_from_positional_args(SeedsDiaryEntry, text)
     if entry is None:
         entry = get_seeds_from_memory(memory)
-    print(f"save_seeds {entry=}")
-    save_seeds_diary_entry_to_db(get_current_seed_pod(), entry)
+    if entry is not None:
+        print(f"save_seeds {entry=}")
+        save_seeds_diary_entry_to_db(get_current_seed_pod(), entry)
 
 
 def get_current_seeds() -> DBSeedsDiaryEntry:

@@ -93,8 +93,9 @@ def save_health_history(memory: ReadOnlySharedMemory, goal: str, utterance: str)
     entry = create_from_positional_args(HealthHistory, utterance)
     if entry is None:
         entry = get_health_history_from_memory(memory)
-    print(f"save_health_history {entry=}")
-    save_health_history_to_db(get_current_user(), entry)
+    if entry is not None:
+        print(f"save_health_history {entry=}")
+        save_health_history_to_db(get_current_user(), entry)
 
 
 @set_attribute("return_direct", False)

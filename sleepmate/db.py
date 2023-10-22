@@ -9,3 +9,9 @@ from .config import (
 db = connect(
     db=SLEEPMATE_MONGODB_NAME, host=SLEEPMATE_MONGODB_HOST, port=SLEEPMATE_MONGODB_PORT
 )
+
+
+def clear_db():
+    db_ = db.get_database(SLEEPMATE_MONGODB_NAME)
+    collection_names = [name for name in db_.list_collection_names() if name != "user"]
+    [db_.drop_collection(name) for name in collection_names]

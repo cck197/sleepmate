@@ -57,8 +57,9 @@ def save_stress_audit(memory: ReadOnlySharedMemory, goal: str, text: str):
     """Saves Stress Audit to the database. Call *only* after all the Stress
     Audit questions have been answered."""
     entry = get_stress_audit_from_memory(memory)
-    print(f"save_stress_audit {entry=}")
-    save_stress_audit_to_db(get_current_user(), entry)
+    if entry is not None:
+        print(f"save_stress_audit {entry=}")
+        save_stress_audit_to_db(get_current_user(), entry)
 
 
 def get_current_stress_audit() -> DBStressAudit:

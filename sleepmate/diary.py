@@ -119,8 +119,9 @@ def save_sleep_diary_entry(memory: ReadOnlySharedMemory, goal: str, text: str):
     entry = create_from_positional_args(SleepDiaryEntry, text)
     if entry is None:
         entry = get_sleep_diary_entry_from_memory(memory)
-    print(f"save_sleep_diary_entry {entry=}")
-    save_sleep_diary_entry_to_db(get_current_user(), entry)
+    if entry is not None:
+        print(f"save_sleep_diary_entry {entry=}")
+        save_sleep_diary_entry_to_db(get_current_user(), entry)
 
 
 @set_attribute("return_direct", False)

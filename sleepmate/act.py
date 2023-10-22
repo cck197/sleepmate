@@ -9,7 +9,6 @@ from mongoengine import ReferenceField
 from .goal import goal_refused
 from .helpful_scripts import (
     get_date_fields,
-    get_start_end,
     json_dumps,
     mongo_to_json,
     parse_date,
@@ -71,8 +70,9 @@ def save_exercise_entry(memory: ReadOnlySharedMemory, goal: str, utterance: str)
     """Saves the exercise entry to the database *only* after the exercise is
     complete."""
     entry = get_exercise_entry_from_memory(memory)
-    print(f"save_exercise_entry {entry=}")
-    save_exercise_entry_to_db(get_current_user(), entry)
+    if entry is not None:
+        print(f"save_exercise_entry {entry=}")
+        save_exercise_entry_to_db(get_current_user(), entry)
 
 
 @set_attribute("return_direct", False)
