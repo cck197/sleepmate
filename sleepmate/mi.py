@@ -4,7 +4,7 @@ from langchain.memory import ReadOnlySharedMemory
 from langchain.prompts import ChatPromptTemplate
 
 from .config import SLEEPMATE_DEFAULT_MODEL_NAME, SLEEPMATE_SAMPLING_TEMPERATURE
-from .helpful_scripts import get_template
+from .helpful_scripts import Goal, get_template
 
 
 def get_completion(
@@ -20,7 +20,7 @@ def get_completion(
     return chain.run(utterance)
 
 
-def get_greeting(memory: ReadOnlySharedMemory, goal: str, utterance: str) -> str:
+def get_greeting(memory: ReadOnlySharedMemory, goal: Goal, utterance: str) -> str:
     """Use this when the human says hello. Get their name from the conversation
     below. If you don't their name, ask.  Otherwise, greet them by name. Also
     ask for their email address so that we can connect offline. If it has been a
@@ -30,7 +30,7 @@ def get_greeting(memory: ReadOnlySharedMemory, goal: str, utterance: str) -> str
     return get_completion(memory, utterance, get_template(goal, get_greeting.__doc__))
 
 
-def get_affirmation(memory: ReadOnlySharedMemory, goal: str, utterance: str) -> str:
+def get_affirmation(memory: ReadOnlySharedMemory, goal: Goal, utterance: str) -> str:
     """Use this whenever the human talks about what they did with any
     positivity. Affirmation is less of a judgment, more of an appreciation of
     positive qualities and behaviors. It is more likely to lift motivation and
@@ -42,7 +42,7 @@ def get_affirmation(memory: ReadOnlySharedMemory, goal: str, utterance: str) -> 
     )
 
 
-def get_open_question(memory: ReadOnlySharedMemory, goal: str, utterance: str) -> str:
+def get_open_question(memory: ReadOnlySharedMemory, goal: Goal, utterance: str) -> str:
     """Use this when the human makes a positive statement that you want to
     explore further and move towards your main goal. Encourage people to say
     what they think and feel, and open the door to talking about change. In
@@ -56,7 +56,7 @@ def get_open_question(memory: ReadOnlySharedMemory, goal: str, utterance: str) -
 
 
 def get_listening_statement(
-    memory: ReadOnlySharedMemory, goal: str, utterance: str
+    memory: ReadOnlySharedMemory, goal: Goal, utterance: str
 ) -> str:
     """Use this when the human is in distress. Hear what they are saying, and
     respond with a listening statement (empathy) to motivate behaviour change.

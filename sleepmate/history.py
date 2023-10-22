@@ -7,6 +7,7 @@ from mongoengine import ReferenceField
 
 from .goal import goal_refused
 from .helpful_scripts import (
+    Goal,
     get_date_fields,
     get_start_end,
     mongo_to_json,
@@ -87,7 +88,7 @@ def get_json_health_history(entry: dict) -> str:
 
 
 @set_attribute("return_direct", False)
-def save_health_history(memory: ReadOnlySharedMemory, goal: str, utterance: str):
+def save_health_history(memory: ReadOnlySharedMemory, goal: Goal, utterance: str):
     """Saves the Health History to the database *only* after all the questions
     have been answered."""
     entry = create_from_positional_args(HealthHistory, utterance)
@@ -99,7 +100,7 @@ def save_health_history(memory: ReadOnlySharedMemory, goal: str, utterance: str)
 
 
 @set_attribute("return_direct", False)
-def get_last_health_history(memory: ReadOnlySharedMemory, goal: str, utterance: str):
+def get_last_health_history(memory: ReadOnlySharedMemory, goal: Goal, utterance: str):
     """Returns the last Health History entry."""
     entry = DBHealthHistory.objects(user=get_current_user()).order_by("-id").first()
     if entry is None:

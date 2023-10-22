@@ -7,6 +7,7 @@ from mongoengine import ReferenceField
 
 from .goal import goal_refused
 from .helpful_scripts import (
+    Goal,
     get_date_fields,
     json_dumps,
     mongo_to_json,
@@ -68,7 +69,7 @@ def get_json_isi_entry(entry: dict) -> str:
 
 
 @set_attribute("return_direct", False)
-def save_isi_entry(memory: ReadOnlySharedMemory, goal: str, utterance: str):
+def save_isi_entry(memory: ReadOnlySharedMemory, goal: Goal, utterance: str):
     """Saves the Insomnia Severity Index entry to the database. Call *only*
     after all the Insomnia Severity Index questions have been answered."""
     entry = get_isi_entry_from_memory(memory)
@@ -78,7 +79,7 @@ def save_isi_entry(memory: ReadOnlySharedMemory, goal: str, utterance: str):
 
 
 @set_attribute("return_direct", False)
-def get_last_isi_entry(memory: ReadOnlySharedMemory, goal: str, utterance: str):
+def get_last_isi_entry(memory: ReadOnlySharedMemory, goal: Goal, utterance: str):
     """Returns the last Insomnia Severity Index entry."""
     entry = DBISIEntry.objects(user=get_current_user()).order_by("-id").first()
     if entry is None:
@@ -89,7 +90,7 @@ def get_last_isi_entry(memory: ReadOnlySharedMemory, goal: str, utterance: str):
 
 
 @set_attribute("return_direct", False)
-def get_date_isi_diary_entry(memory: ReadOnlySharedMemory, goal: str, utterance: str):
+def get_date_isi_diary_entry(memory: ReadOnlySharedMemory, goal: Goal, utterance: str):
     """Returns the Insomnia Severity Index entry for a given date."""
     date = parse_date(utterance)
     db_entry = DBISIEntry.objects(user=get_current_user(), date=date).first()
@@ -99,7 +100,7 @@ def get_date_isi_diary_entry(memory: ReadOnlySharedMemory, goal: str, utterance:
 
 
 @set_attribute("return_direct", False)
-def get_isi_dates(memory: ReadOnlySharedMemory, goal: str, utterance: str):
+def get_isi_dates(memory: ReadOnlySharedMemory, goal: Goal, utterance: str):
     """Returns the dates of all Insomnia Severity Index entries in JSON format.
     Call with exactly one argument."""
     return json_dumps([e.date for e in DBISIEntry.objects(user=get_current_user())])

@@ -32,6 +32,7 @@ from .config import (
 from .db import *
 from .goal import set_goal_refused
 from .helpful_scripts import (
+    Goal,
     display_markdown,
     find_human_messages,
     flatten_dict,
@@ -39,7 +40,7 @@ from .helpful_scripts import (
     import_attrs,
     json_dumps,
 )
-from .user import get_current_user, get_user_from_email
+from .user import get_user_from_email
 
 GOALS = [
     {
@@ -70,7 +71,7 @@ class CustomTool(Tool):
         return tuple(all_args), {}
 
 
-def get_tools(funcs, memory: ReadOnlySharedMemory, goal: str) -> list[Tool]:
+def get_tools(funcs, memory: ReadOnlySharedMemory, goal: Goal) -> list[Tool]:
     tools = [
         CustomTool.from_function(
             func=partial(f, memory, goal),
@@ -104,12 +105,6 @@ class GoalRefusedHandler(BaseCallbackHandler):
             self.callback(action)
 
 
-def get_chat_memory():
-    return ConversationBufferWindowMemory(
-        k=k,
-    )
-
-
 class X(object):
     DEFAULT_GOAL_LIST = [
         "health_history",
@@ -123,6 +118,7 @@ class X(object):
         "open_focus",
         "leaves_on_a_stream",
         "valued_living",
+        "all_for_now",
     ]
 
     def __init__(
@@ -150,12 +146,12 @@ class X(object):
         self.goal_refused = False
         self.stop_handler = GoalRefusedHandler(self.set_goal_refused)
         if goal:
-            self.goal = goal
+            self.goal = Goal(key=goal, description=self.goals["GOALS"][goal])
             self.fixed_goal = True
-            self.set_agent()
         else:
             self.goal = None
         self.load_memory()
+        self.set_agent()
         if hello is not None:
             self.say(hello)
 
@@ -169,16 +165,16 @@ class X(object):
             (goal_ for goal_ in self.goal_list if self.goals["GOAL_HANDLERS"][goal_]()),
             "",
         )
-        return goal
+        return Goal(key=goal, description=self.goals["GOALS"][goal]) if goal else None
 
     def set_agent(self):
         # the model is fine tuned for selecting a function
         # sampling temperature is set to 0 (no sampling)
-        goal = self.goals["GOALS"][self.goal] if self.goal else None
+        # goal = self.goals["GOALS"][self.goal] if self.goal else None
         agent = OpenAIFunctionsAgent(
             llm=ChatOpenAI(temperature=0, model=SLEEPMATE_AGENT_MODEL_NAME),
-            tools=get_tools(self.tools, self.ro_memory, goal),
-            prompt=get_agent_prompt(goal),
+            tools=get_tools(self.tools, self.ro_memory, self.goal),
+            prompt=get_agent_prompt(self.goal),
         )
         self.agent_executor = AgentExecutor(
             agent=agent, tools=agent.tools, memory=self.memory
@@ -207,7 +203,7 @@ class X(object):
         self.goal_refused = False
         goal = self.get_next_goal()
         if not utterance:
-            utterance = goal
+            utterance = goal.key
         if goal != self.goal:
             print(f"X.say {self.goal} -> {goal}")
             # print(f"X.__call__ {goal=}")
@@ -245,15 +241,15 @@ class X(object):
         self.add_user_to_memory()
 
 
-def get_agent_prompt(
-    goal: str = "",
-) -> ChatPromptTemplate:
+def get_agent_prompt(goal: Goal) -> ChatPromptTemplate:
     system = get_system_prompt(goal)
-    return ChatPromptTemplate.from_messages(
-        [
-            SystemMessagePromptTemplate.from_template(system),
-            MessagesPlaceholder(variable_name="chat_history"),
-            HumanMessagePromptTemplate.from_template("{input}"),
-            MessagesPlaceholder(variable_name="agent_scratchpad"),
-        ]
-    )
+    messages = [
+        SystemMessagePromptTemplate.from_template(system),
+        MessagesPlaceholder(variable_name="chat_history"),
+        HumanMessagePromptTemplate.from_template("{input}"),
+        MessagesPlaceholder(variable_name="agent_scratchpad"),
+    ]
+    if goal is not None:
+        messages.insert(-1, SystemMessagePromptTemplate.from_template(str(goal)))
+
+    return ChatPromptTemplate.from_messages(messages)

@@ -8,6 +8,7 @@ from mongoengine import ReferenceField
 
 from .goal import goal_refused
 from .helpful_scripts import (
+    Goal,
     get_date_fields,
     json_dumps,
     mongo_to_json,
@@ -66,7 +67,7 @@ def get_json_exercise_entry(entry: dict) -> str:
 
 
 @set_attribute("return_direct", False)
-def save_exercise_entry(memory: ReadOnlySharedMemory, goal: str, utterance: str):
+def save_exercise_entry(memory: ReadOnlySharedMemory, goal: Goal, utterance: str):
     """Saves the exercise entry to the database *only* after the exercise is
     complete."""
     entry = get_exercise_entry_from_memory(memory)
@@ -76,7 +77,7 @@ def save_exercise_entry(memory: ReadOnlySharedMemory, goal: str, utterance: str)
 
 
 @set_attribute("return_direct", False)
-def get_last_exercise_entry(memory: ReadOnlySharedMemory, goal: str, utterance: str):
+def get_last_exercise_entry(memory: ReadOnlySharedMemory, goal: Goal, utterance: str):
     """Returns the last exercise entry."""
     entry = DBExerciseEntry.objects(user=get_current_user()).order_by("-id").first()
     if entry is None:
@@ -87,7 +88,7 @@ def get_last_exercise_entry(memory: ReadOnlySharedMemory, goal: str, utterance: 
 
 
 @set_attribute("return_direct", False)
-def get_date_exercise_entry(memory: ReadOnlySharedMemory, goal: str, utterance: str):
+def get_date_exercise_entry(memory: ReadOnlySharedMemory, goal: Goal, utterance: str):
     """Returns the exercise entry for a given date."""
     date = parse_date(utterance)
     db_entry = DBExerciseEntry.objects(user=get_current_user(), date=date).first()
@@ -97,7 +98,7 @@ def get_date_exercise_entry(memory: ReadOnlySharedMemory, goal: str, utterance: 
 
 
 @set_attribute("return_direct", False)
-def get_exercise_dates(memory: ReadOnlySharedMemory, goal: str, utterance: str):
+def get_exercise_dates(memory: ReadOnlySharedMemory, goal: Goal, utterance: str):
     """Returns the dates of all exercise entries in JSON format.
     Call with exactly one argument."""
     return json_dumps(
@@ -164,7 +165,7 @@ def get_json_vlq_entry(entry: dict) -> str:
 
 
 @set_attribute("return_direct", False)
-def save_vlq_entry(memory: ReadOnlySharedMemory, goal: str, text: str):
+def save_vlq_entry(memory: ReadOnlySharedMemory, goal: Goal, text: str):
     """Saves VLQ entry to the database. Call *only* after all the VLQ questions
     have been answered."""
     entry = get_vlq_entry_from_memory(memory)
@@ -178,7 +179,7 @@ def get_current_vlq_entry() -> DBVLQEntry:
 
 
 @set_attribute("return_direct", False)
-def get_vlq_entry(memory: ReadOnlySharedMemory, goal: str, utterance: str):
+def get_vlq_entry(memory: ReadOnlySharedMemory, goal: Goal, utterance: str):
     """Returns VLQ entry from the database."""
     entry = get_current_vlq_entry()
     print(f"get_vlq_entry {entry=}")

@@ -1,6 +1,7 @@
 import importlib
 import json
 from collections import defaultdict
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import List
@@ -119,14 +120,28 @@ def get_start_end(date: datetime = None) -> (datetime, datetime):
     )
 
 
+@dataclass
+class Goal:
+    key: str
+    description: str
+
+    def __eq__(self, other):
+        if not isinstance(other, Goal):
+            return False
+        return self.key == other.key
+
+    def __repr__(self) -> str:
+        return self.key
+
+
 def get_system_prompt(
-    goal: str = "",
+    goal: Goal,
     stop_sequence: str = SLEEPMATE_STOP_SEQUENCE,
 ) -> str:
     system = SLEEPMATE_SYSTEM_DESCRIPTION
-    if goal:
+    if goal is not None:
         system = (
-            f"{system}\n{goal}\n"
+            f"{system}\n{goal.description}\n"
             "Very important! Don't ask the human how you can assist them. "
             "Instead, get to the goal as quickly as possible.\n"
         )
@@ -143,7 +158,7 @@ def get_system_prompt(
     return system
 
 
-def get_template(goal: str, prompt: str) -> ChatPromptTemplate:
+def get_template(goal: Goal, prompt: str) -> ChatPromptTemplate:
     system = get_system_prompt(goal)
     return ChatPromptTemplate(
         messages=[

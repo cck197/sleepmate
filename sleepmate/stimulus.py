@@ -5,7 +5,7 @@ from langchain.pydantic_v1 import BaseModel, Field
 from mongoengine import ReferenceField
 
 from .goal import goal_refused
-from .helpful_scripts import mongo_to_json, set_attribute
+from .helpful_scripts import Goal, mongo_to_json, set_attribute
 from .structured import pydantic_to_mongoengine
 from .user import DBUser, get_current_user
 
@@ -29,7 +29,7 @@ def save_stimulus_control_seen_to_db(
 
 
 @set_attribute("return_direct", False)
-def get_stimulus_control_seen(memory: ReadOnlySharedMemory, goal: str, utterance: str):
+def get_stimulus_control_seen(memory: ReadOnlySharedMemory, goal: Goal, utterance: str):
     """Returns True if the human has already seen the Stimulus Control Therapy
     instructions."""
     db_entry = DBStimulusControlSeen.objects(user=get_current_user()).first()
@@ -39,7 +39,7 @@ def get_stimulus_control_seen(memory: ReadOnlySharedMemory, goal: str, utterance
 
 
 @set_attribute("return_direct", False)
-def save_stimulus_control_seen(memory: ReadOnlySharedMemory, goal: str, text: str):
+def save_stimulus_control_seen(memory: ReadOnlySharedMemory, goal: Goal, text: str):
     """Saves a record of the human having seen the Stimulus Control Therapy
     Instructions to the database."""
     entry = StimulusControlSeen(date=datetime.now()).dict()

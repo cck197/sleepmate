@@ -3,7 +3,7 @@ from datetime import datetime
 from langchain.pydantic_v1 import BaseModel, Field, validator
 from mongoengine import ReferenceField
 
-from .helpful_scripts import get_date_fields, get_start_end, parse_date
+from .helpful_scripts import Goal, get_date_fields, get_start_end, parse_date
 from .structured import fix_schema, pydantic_to_mongoengine
 from .user import DBUser, get_current_user
 
@@ -31,7 +31,7 @@ DBGoalRefusal = pydantic_to_mongoengine(
 )
 
 
-def goal_refused(goal: str, start=None, end=None) -> DBGoalRefusal:
+def goal_refused(goal: Goal, start=None, end=None) -> DBGoalRefusal:
     if start is None or end is None:
         (start_, end_) = get_start_end()
         if start is None:
@@ -43,7 +43,7 @@ def goal_refused(goal: str, start=None, end=None) -> DBGoalRefusal:
     ).first()
 
 
-def set_goal_refused(goal: str) -> DBGoalRefusal:
+def set_goal_refused(goal: Goal) -> DBGoalRefusal:
     return DBGoalRefusal(
         **{"user": get_current_user(), "goal": goal, "date": datetime.now()}
     ).save()

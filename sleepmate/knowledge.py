@@ -21,7 +21,7 @@ from .config import (
     SLEEPMATE_MAX_TOKENS,
 )
 from .goal import goal_refused
-from .helpful_scripts import mongo_to_json, set_attribute
+from .helpful_scripts import Goal, mongo_to_json, set_attribute
 from .mi import get_completion
 from .structured import pydantic_to_mongoengine
 from .user import DBUser, get_current_user
@@ -46,7 +46,7 @@ def save_daily_routine_seen_to_db(
 
 
 @set_attribute("return_direct", False)
-def get_daily_routine_seen(memory: ReadOnlySharedMemory, goal: str, utterance: str):
+def get_daily_routine_seen(memory: ReadOnlySharedMemory, goal: Goal, utterance: str):
     """Returns True if the human has already seen the daily routine."""
     db_entry = DBDailyRoutineSeen.objects(user=get_current_user()).first()
     if db_entry is None:
@@ -55,7 +55,7 @@ def get_daily_routine_seen(memory: ReadOnlySharedMemory, goal: str, utterance: s
 
 
 @set_attribute("return_direct", False)
-def save_daily_routine_seen(memory: ReadOnlySharedMemory, goal: str, text: str):
+def save_daily_routine_seen(memory: ReadOnlySharedMemory, goal: Goal, text: str):
     """Saves a record of the human having seen the daily routine to the database."""
     entry = DailyRoutineSeen(date=datetime.now()).dict()
     print(f"save_daily_routine_seen {entry=}")
@@ -73,7 +73,8 @@ GOALS = [
         them sleep better. Ask them if they're open to hearing about a daily
         routine. If they say yes, record a record of them having seen the
         routine then run the get_knowledge_answer tool with the query `daily
-        routine`.""",
+        routine`. Finish by telling them not to worry about making any changes
+        yet. We'll get to that later.""",
     }
 ]
 
@@ -145,7 +146,7 @@ def get_context(utterance: str) -> str:
 
 
 def get_knowledge_answer(
-    memory: ReadOnlySharedMemory, goal: str, utterance: str
+    memory: ReadOnlySharedMemory, goal: Goal, utterance: str
 ) -> str:
     """Use this whenever the human asks a specific technical question about what
     to do, or about sleep. Use this more than the other tools."""  #

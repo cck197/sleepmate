@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime, time, timedelta
 
 from dateutil.parser import parse as date_parser
 from langchain.memory import ReadOnlySharedMemory
@@ -7,12 +7,7 @@ from langchain.schema import BaseMemory
 from mongoengine import ReferenceField
 
 from .goal import goal_refused
-from .helpful_scripts import (
-    get_date_fields,
-    get_start_end,
-    mongo_to_json,
-    set_attribute,
-)
+from .helpful_scripts import Goal, get_date_fields, mongo_to_json, set_attribute
 from .structured import (
     create_from_positional_args,
     fix_schema,
@@ -72,7 +67,7 @@ def get_json_seed_pod(entry: dict) -> str:
 
 
 @set_attribute("return_direct", False)
-def save_seed_pod(memory: ReadOnlySharedMemory, goal: str, text: str):
+def save_seed_pod(memory: ReadOnlySharedMemory, goal: Goal, text: str):
     """Saves SEEDS to the database. Call *only* after all the SEEDS questions
     have been answered."""
     entry = create_from_positional_args(SeedPod, text)
@@ -89,7 +84,7 @@ def get_current_seed_pod() -> DBSeedPod:
 
 
 @set_attribute("return_direct", False)
-def get_seed_pod(memory: ReadOnlySharedMemory, goal: str, utterance: str):
+def get_seed_pod(memory: ReadOnlySharedMemory, goal: Goal, utterance: str):
     """Returns predefined SEEDS tasks from the database."""
     entry = get_current_seed_pod()
     print(f"get_seed_pod {entry=}")
@@ -157,7 +152,7 @@ def get_json_seeds(entry: dict) -> str:
 
 
 @set_attribute("return_direct", False)
-def save_seeds_diary_entry(memory: ReadOnlySharedMemory, goal: str, text: str):
+def save_seeds_diary_entry(memory: ReadOnlySharedMemory, goal: Goal, text: str):
     """Saves a SEEDS diary entry to the database. Call *only* after all the
     SEEDS diary entry questions have been answered."""
     entry = create_from_positional_args(SeedsDiaryEntry, text)
@@ -174,7 +169,7 @@ def get_current_seeds() -> DBSeedsDiaryEntry:
 
 
 @set_attribute("return_direct", False)
-def get_seeds_diary_entry(memory: ReadOnlySharedMemory, goal: str, utterance: str):
+def get_seeds_diary_entry(memory: ReadOnlySharedMemory, goal: Goal, utterance: str):
     """Returns SEEDS diary entry from the database."""
     db_entry = get_current_seeds()
     print(f"get_seeds_diary_entry {db_entry=}")
@@ -185,18 +180,25 @@ def get_seeds_diary_entry(memory: ReadOnlySharedMemory, goal: str, utterance: st
 
 
 def seeds_entry():
-    (start, end) = get_start_end()
-    return not goal_refused("seeds_entry", start, end) and (
-        DBSeedsDiaryEntry.objects(
-            pod=get_current_seed_pod(), date__gte=start, date__lte=end
-        ).count()
+    end = datetime.combine(date.today(), time())
+    start = end - timedelta(days=30)
+
+    if goal_refused("seeds_entry", start, end):
+        return False
+
+    start = end - timedelta(days=1)
+
+    return (
+        DBSeedsDiaryEntry.objects(pod=get_current_seed_pod(), date__gte=start).count()
         == 0
     )
 
 
 def seeds_probe():
+    end = datetime.combine(date.today(), time())
+    start = end - timedelta(days=30)
     return (
-        not goal_refused("seeds_entry")
+        not goal_refused("seeds_probe", start, end)
         and DBSeedPod.objects(user=get_current_user()).count() == 0
     )
 

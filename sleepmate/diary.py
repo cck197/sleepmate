@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import date, datetime, time, timedelta
 
 from langchain.memory import ReadOnlySharedMemory
 from langchain.pydantic_v1 import BaseModel, Field, validator
@@ -7,6 +7,7 @@ from mongoengine import ReferenceField
 
 from .goal import goal_refused
 from .helpful_scripts import (
+    Goal,
     get_date_fields,
     get_start_end,
     json_dumps,
@@ -113,7 +114,7 @@ def get_json_diary_entry(entry: dict) -> str:
 
 
 @set_attribute("return_direct", False)
-def save_sleep_diary_entry(memory: ReadOnlySharedMemory, goal: str, text: str):
+def save_sleep_diary_entry(memory: ReadOnlySharedMemory, goal: Goal, text: str):
     """Saves the diary entry to the database. Call *only* after all the diary
     entry questions have been answered."""
     entry = create_from_positional_args(SleepDiaryEntry, text)
@@ -125,7 +126,7 @@ def save_sleep_diary_entry(memory: ReadOnlySharedMemory, goal: str, text: str):
 
 
 @set_attribute("return_direct", False)
-def get_sleep_diary_dates(memory: ReadOnlySharedMemory, goal: str, utterance: str):
+def get_sleep_diary_dates(memory: ReadOnlySharedMemory, goal: Goal, utterance: str):
     """Returns the dates of all sleep diary entries in JSON format."""
     return json_dumps(
         [e.date for e in DBSleepDiaryEntry.objects(user=get_current_user())]
@@ -133,7 +134,9 @@ def get_sleep_diary_dates(memory: ReadOnlySharedMemory, goal: str, utterance: st
 
 
 @set_attribute("return_direct", False)
-def get_last_sleep_diary_entry(memory: ReadOnlySharedMemory, goal: str, utterance: str):
+def get_last_sleep_diary_entry(
+    memory: ReadOnlySharedMemory, goal: Goal, utterance: str
+):
     """Returns the last sleep diary entry."""
     db_entry = DBSleepDiaryEntry.objects(user=get_current_user()).first()
     if db_entry is None:
@@ -144,7 +147,9 @@ def get_last_sleep_diary_entry(memory: ReadOnlySharedMemory, goal: str, utteranc
 
 
 @set_attribute("return_direct", False)
-def get_date_sleep_diary_entry(memory: ReadOnlySharedMemory, goal: str, utterance: str):
+def get_date_sleep_diary_entry(
+    memory: ReadOnlySharedMemory, goal: Goal, utterance: str
+):
     """Returns the sleep diary entry for a given date."""
     date = parse_date(utterance, default_days=1)
     (start, end) = get_start_end(date)
@@ -159,13 +164,16 @@ def get_date_sleep_diary_entry(memory: ReadOnlySharedMemory, goal: str, utteranc
 def diary_entry():
     """Returns True if it's time to ask the human to record a sleep diary
     entry."""
-    (start, end) = get_start_end(datetime.now() - timedelta(days=1))
+    end = datetime.combine(date.today(), time())
+    start = end - timedelta(days=30)
 
-    return not goal_refused("diary_entry", start, end) and (
-        DBSleepDiaryEntry.objects(
-            user=get_current_user(), date__gte=start, date__lte=end
-        ).count()
-        == 0
+    if goal_refused("diary_entry", start, end):
+        return False
+
+    start = end - timedelta(days=1)
+
+    return (
+        DBSleepDiaryEntry.objects(user=get_current_user(), date__gte=start).count() == 0
     )
 
 
@@ -227,7 +235,7 @@ GOALS = [
 
 
 def get_sleep_diary_description(
-    memory: ReadOnlySharedMemory, goal: str, utterance: str
+    memory: ReadOnlySharedMemory, goal: Goal, utterance: str
 ) -> str:
     """Use this when the human asks what a sleep diary is. Summarise the
     numbered list of questions only. Call with exactly one string argument."""

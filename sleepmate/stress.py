@@ -7,7 +7,7 @@ from langchain.schema import BaseMemory
 from mongoengine import ReferenceField
 
 from .goal import goal_refused
-from .helpful_scripts import get_date_fields, mongo_to_json, set_attribute
+from .helpful_scripts import Goal, get_date_fields, mongo_to_json, set_attribute
 from .structured import fix_schema, get_parsed_output, pydantic_to_mongoengine
 from .user import DBUser, get_current_user
 
@@ -53,7 +53,7 @@ def get_json_stress_audit(entry: dict) -> str:
 
 
 @set_attribute("return_direct", False)
-def save_stress_audit(memory: ReadOnlySharedMemory, goal: str, text: str):
+def save_stress_audit(memory: ReadOnlySharedMemory, goal: Goal, text: str):
     """Saves Stress Audit to the database. Call *only* after all the Stress
     Audit questions have been answered."""
     entry = get_stress_audit_from_memory(memory)
@@ -68,7 +68,7 @@ def get_current_stress_audit() -> DBStressAudit:
 
 
 @set_attribute("return_direct", False)
-def get_stress_audit(memory: ReadOnlySharedMemory, goal: str, utterance: str):
+def get_stress_audit(memory: ReadOnlySharedMemory, goal: Goal, utterance: str):
     """Returns Stress Audit from the database."""
     entry = get_current_stress_audit()
     print(f"get_stress_audit {entry=}")
@@ -92,7 +92,7 @@ GOAL_HANDLERS = [
 GOALS = [
     {
         "stress_audit": """
-        Your goals is to help the human conduct a stress audit. created by Simon
+        Your goal is to help the human conduct a stress audit. created by Simon
         Marshall, PhD. Summarise the exercise described below.
 
         Coping is the purposeful ability to manage SENSATIONS, PERCEPTIONS,
