@@ -30,7 +30,7 @@ from .config import (
     SLEEPMATE_STOP_SEQUENCE,
 )
 from .db import *
-from .goal import set_goal_refused
+from .goal import add_goal_refused
 from .helpful_scripts import (
     Goal,
     display_markdown,
@@ -39,21 +39,20 @@ from .helpful_scripts import (
     get_system_prompt,
     import_attrs,
     json_dumps,
+    set_attribute,
 )
 from .user import get_user_from_email
 
-GOALS = [
-    {
-        "test": """Your goal is to find out the human's favourite colour.""",
-    }
-]
 
-
-def get_date(*args, **kwargs) -> date:
+@set_attribute("return_direct", False)
+def get_date(memory: ReadOnlySharedMemory, goal: Goal, utterance: str):
     """Returns todays date, use this for any questions related to knowing todays
     date. This function takes any arguments and will always return today's date
     - any date mathematics should occur outside this function."""
     return str(date.today())
+
+
+TOOLS = [get_date]
 
 
 class CustomTool(Tool):
@@ -72,7 +71,7 @@ class CustomTool(Tool):
 
 
 def get_tools(funcs, memory: ReadOnlySharedMemory, goal: Goal) -> list[Tool]:
-    tools = [
+    return [
         CustomTool.from_function(
             func=partial(f, memory, goal),
             name=f.__name__,
@@ -81,17 +80,6 @@ def get_tools(funcs, memory: ReadOnlySharedMemory, goal: Goal) -> list[Tool]:
         )
         for f in funcs
     ]
-    tools.extend(
-        [
-            CustomTool(
-                name=t.__name__, func=t, description=t.__doc__, return_direct=False
-            )
-            for t in [
-                get_date,
-            ]
-        ]
-    )
-    return tools
 
 
 class GoalRefusedHandler(BaseCallbackHandler):
@@ -130,6 +118,7 @@ class X(object):
         add_user: bool = True,
         email: str = None,
         goal_list: List[str] = None,
+        fixed_goal: bool = False,
     ) -> None:
         self.fixed_goal = False
         self.goal_list = goal_list or X.DEFAULT_GOAL_LIST
@@ -145,11 +134,10 @@ class X(object):
         self.db_user = get_user_from_email(email)
         self.goal_refused = False
         self.stop_handler = GoalRefusedHandler(self.set_goal_refused)
+        self.fixed_goal = fixed_goal
+        self.goal = None
         if goal:
             self.goal = Goal(key=goal, description=self.goals["GOALS"][goal])
-            self.fixed_goal = True
-        else:
-            self.goal = None
         self.load_memory()
         self.set_agent()
         if hello is not None:
@@ -183,7 +171,7 @@ class X(object):
     def set_goal_refused(self, action: AgentAction, goal_refused: bool = True) -> None:
         self.goal_refused = goal_refused
         if goal_refused:
-            set_goal_refused(self.goal)
+            add_goal_refused(self.goal.key)
 
     def add_user_to_memory(self) -> None:
         """Add the user to memory if they haven't already been added."""
@@ -240,8 +228,15 @@ class X(object):
         self.ro_memory = ReadOnlySharedMemory(memory=self.memory)
         self.add_user_to_memory()
 
+    def delete_chat_history(self, N=10):
+        """Delete the last N chat history entries."""
+        collection = self.memory.chat_memory.collection
+        cursor = collection.find().sort([("_id", -1)]).limit(N)
+        ids_to_delete = [doc["_id"] for doc in cursor]
+        collection.delete_many({"_id": {"$in": ids_to_delete}})
 
-def get_agent_prompt(goal: Goal) -> ChatPromptTemplate:
+
+def get_agent_prompt(goal: Goal, rigid=False) -> ChatPromptTemplate:
     system = get_system_prompt(goal)
     messages = [
         SystemMessagePromptTemplate.from_template(system),
@@ -249,7 +244,9 @@ def get_agent_prompt(goal: Goal) -> ChatPromptTemplate:
         HumanMessagePromptTemplate.from_template("{input}"),
         MessagesPlaceholder(variable_name="agent_scratchpad"),
     ]
-    if goal is not None:
+    # nuclear option - set the goal as a system message, thus overriding the
+    # agent's prediction of what to do next
+    if rigid:
         messages.insert(-1, SystemMessagePromptTemplate.from_template(str(goal)))
 
     return ChatPromptTemplate.from_messages(messages)

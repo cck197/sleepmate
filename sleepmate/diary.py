@@ -164,12 +164,10 @@ def get_date_sleep_diary_entry(
 def diary_entry():
     """Returns True if it's time to ask the human to record a sleep diary
     entry."""
-    end = datetime.combine(date.today(), time())
-    start = end - timedelta(days=30)
-
-    if goal_refused("diary_entry", start, end):
+    if goal_refused("diary_entry"):
         return False
 
+    end = datetime.combine(date.today(), time())
     start = end - timedelta(days=1)
 
     return (

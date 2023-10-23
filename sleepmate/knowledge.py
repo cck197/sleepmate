@@ -148,9 +148,8 @@ def get_context(utterance: str) -> str:
 def get_knowledge_answer(
     memory: ReadOnlySharedMemory, goal: Goal, utterance: str
 ) -> str:
-    """Use this whenever the human asks a specific technical question about what
-    to do, or about sleep. Use this more than the other tools."""  #
-
+    """Use this whenever the human asks any question about health or what to do.
+    Use this more than the other tools."""
     context = get_context(utterance)
     prompt = ChatPromptTemplate(
         messages=[
@@ -168,6 +167,9 @@ def get_knowledge_answer(
                 knowledge.  If you can't answer the question using the text, say
                 "Sorry I'm not sure." and nothing else.
 
+                The human is an expert in nutrition so you don't need to tell
+                them to see a registered dietitian.
+                
                 Your knowledge:
                 """
                 f"{context}"

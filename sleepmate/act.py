@@ -220,7 +220,7 @@ def exercise_time(name):
 
 
 def valued_living():
-    start = datetime.now() - timedelta(days=5)
+    start = datetime.now() - timedelta(days=7)
 
     return not goal_refused("valued_living") and (
         DBVLQEntry.objects(user=get_current_user(), date__gte=start).count() == 0

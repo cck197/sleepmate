@@ -48,7 +48,8 @@ def create_from_positional_args(model_cls, text: str):
         kwargs = {field: arg for field, arg in zip(field_names, args)}
         return model_cls(**kwargs)
     except Exception as e:
-        print(f"create_from_positional_args: {e=}")
+        # print(f"create_from_positional_args: {e=}")
+        pass
 
 
 def get_parsed_output(

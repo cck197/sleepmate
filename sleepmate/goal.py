@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from langchain.pydantic_v1 import BaseModel, Field, validator
 from mongoengine import ReferenceField
@@ -31,19 +31,16 @@ DBGoalRefusal = pydantic_to_mongoengine(
 )
 
 
-def goal_refused(goal: Goal, start=None, end=None) -> DBGoalRefusal:
-    if start is None or end is None:
-        (start_, end_) = get_start_end()
-        if start is None:
-            start = start_
-        if end is None:
-            end = end_
-    return DBGoalRefusal.objects(
-        goal=goal, user=get_current_user(), date__gte=start, date__lte=end
-    ).first()
+def goal_refused(goal: str, days: int = 1) -> DBGoalRefusal:
+    """Returns the last goal refusal for the given goal and user within the last
+    `days` days."""
+    kwargs = {"goal": goal, "user": get_current_user()}
+    if days is not None:
+        kwargs["date__gte"] = datetime.now() - timedelta(days=days)
+    return DBGoalRefusal.objects(**kwargs).first()
 
 
-def set_goal_refused(goal: Goal) -> DBGoalRefusal:
+def add_goal_refused(goal: str) -> DBGoalRefusal:
     return DBGoalRefusal(
         **{"user": get_current_user(), "goal": goal, "date": datetime.now()}
     ).save()

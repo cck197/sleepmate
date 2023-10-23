@@ -180,12 +180,10 @@ def get_seeds_diary_entry(memory: ReadOnlySharedMemory, goal: Goal, utterance: s
 
 
 def seeds_entry():
-    end = datetime.combine(date.today(), time())
-    start = end - timedelta(days=30)
-
-    if goal_refused("seeds_entry", start, end):
+    if goal_refused("seeds_probe", days=None) or goal_refused("seeds_entry"):
         return False
 
+    end = datetime.combine(date.today(), time())
     start = end - timedelta(days=1)
 
     return (
@@ -195,10 +193,8 @@ def seeds_entry():
 
 
 def seeds_probe():
-    end = datetime.combine(date.today(), time())
-    start = end - timedelta(days=30)
     return (
-        not goal_refused("seeds_probe", start, end)
+        not goal_refused("seeds_probe", days=7)
         and DBSeedPod.objects(user=get_current_user()).count() == 0
     )
 
