@@ -17,7 +17,15 @@ from langchain.prompts import (
 )
 from langchain.schema import AIMessage, HumanMessage
 
-from .config import SLEEPMATE_STOP_SEQUENCE, SLEEPMATE_SYSTEM_DESCRIPTION
+from .config import (
+    SLEEPMATE_CONFIRMATION_WORDS,
+    SLEEPMATE_STOP_SEQUENCE,
+    SLEEPMATE_SYSTEM_DESCRIPTION,
+)
+
+
+def get_confirmation_str():
+    return '"{}"'.format('", "'.join(SLEEPMATE_CONFIRMATION_WORDS))
 
 
 def display_markdown(text: str) -> None:

@@ -7,7 +7,13 @@ from langchain.schema import BaseMemory
 from mongoengine import ReferenceField
 
 from .goal import goal_refused
-from .helpful_scripts import Goal, get_date_fields, mongo_to_json, set_attribute
+from .helpful_scripts import (
+    Goal,
+    get_confirmation_str,
+    get_date_fields,
+    mongo_to_json,
+    set_attribute,
+)
 from .structured import (
     create_from_positional_args,
     fix_schema,
@@ -153,13 +159,12 @@ def get_json_seeds(entry: dict) -> str:
 
 @set_attribute("return_direct", False)
 def save_seeds_diary_entry(memory: ReadOnlySharedMemory, goal: Goal, text: str):
-    """Saves a SEEDS diary entry to the database. Call *only* after all the
-    SEEDS diary entry questions have been answered."""
+    """Call this to save a SEEDS diary entry to the database."""
     entry = create_from_positional_args(SeedsDiaryEntry, text)
     if entry is None:
         entry = get_seeds_from_memory(memory)
+    print(f"save_seeds_diary_entry {entry=}")
     if entry is not None:
-        print(f"save_seeds {entry=}")
         save_seeds_diary_entry_to_db(get_current_seed_pod(), entry)
 
 
@@ -208,10 +213,11 @@ GOAL_HANDLERS = [
 
 GOALS = [
     {
-        "seeds_probe": """
+        "seeds_probe": f"""
         Your goal is to ask the human to do the SEEDS exercise created by Simon
         Marshall, PhD. Explain briefly what's involved and then ask if they'd
-        like to know more. Then summarise the exercise using the following:
+        like to know more. Once they confirm by saying something like
+        {get_confirmation_str()}, summarise the exercise using the following:
         
         The pillars of good health are Sleep, Exercise, Eating, Drinking, and
         Stress management (SEEDS). Yes, "SEEDS" is cheesy as fuck, but the
@@ -284,7 +290,7 @@ GOALS = [
         it's correct. Give them a score (/15) for how many they managed to do
         that day.
 
-        Only after they've confirmed, save the SEEDS diary entry to the database.
+        Finally, save the SEEDS diary entry to the database.
         """,
     },
 ]

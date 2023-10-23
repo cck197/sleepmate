@@ -45,7 +45,7 @@ from .user import get_user_from_email
 
 
 @set_attribute("return_direct", False)
-def get_date(memory: ReadOnlySharedMemory, goal: Goal, utterance: str):
+def get_date(*args, **kwargs):
     """Returns todays date, use this for any questions related to knowing todays
     date. This function takes any arguments and will always return today's date
     - any date mathematics should occur outside this function."""
@@ -208,7 +208,7 @@ class X(object):
 
     def load_memory(
         self,
-        k: int = 30,
+        k: int = 10,
         memory_key: str = "chat_history",
     ) -> None:
         self.memory = ConversationBufferWindowMemory(

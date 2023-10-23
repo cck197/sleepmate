@@ -21,7 +21,7 @@ from .config import (
     SLEEPMATE_MAX_TOKENS,
 )
 from .goal import goal_refused
-from .helpful_scripts import Goal, mongo_to_json, set_attribute
+from .helpful_scripts import Goal, get_confirmation_str, mongo_to_json, set_attribute
 from .mi import get_completion
 from .structured import pydantic_to_mongoengine
 from .user import DBUser, get_current_user
@@ -68,10 +68,11 @@ GOALS = [
         Your goal is to answer any questions the human has about health,
         wellness and performance.
         """,
-        "daily_routine": """
+        "daily_routine": f"""
         Your goal is to help the human identify a daily routine that will help
         them sleep better. Ask them if they're open to hearing about a daily
-        routine. If they say yes, record a record of them having seen the
+        routine. Once they confirm by saying something like
+        {get_confirmation_str()}, record a record of them having seen the
         routine then run the get_knowledge_answer tool with the query `daily
         routine`. Finish by telling them not to worry about making any changes
         yet. We'll get to that later.""",

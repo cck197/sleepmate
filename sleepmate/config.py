@@ -7,7 +7,9 @@ SLEEPMATE_DEFAULT_MODEL_NAME = os.environ.get("SLEEPMATE_DEFAULT_MODEL_NAME", "g
 # for parsing output in memory to a JSON object
 SLEEPMATE_PARSER_MODEL_NAME = os.environ.get("SLEEPMATE_PARSER_MODEL_NAME", "gpt-4")
 # fine tuned for selecting a function
-SLEEPMATE_AGENT_MODEL_NAME = os.environ.get("SLEEPMATE_AGENT_MODEL_NAME", "gpt-4-0613")
+SLEEPMATE_AGENT_MODEL_NAME = os.environ.get(
+    "SLEEPMATE_AGENT_MODEL_NAME", "gpt-4"
+)  # -0613")
 SLEEPMATE_DATADIR = os.environ.get("SLEEPMATE_DATADIR", "data")
 SLEEPMATE_MAX_TOKENS = os.environ.get("SLEEPMATE_MAX_TOKENS", 8192)
 DEBUG = os.environ.get("DEBUG", False)
@@ -27,6 +29,18 @@ SLEEPMATE_MONGODB_PORT = os.environ.get("SLEEPMATE_MONGODB_PORT", 27017)
 SLEEPMATE_MONGODB_CONNECTION_STRING = (
     f"mongodb://{SLEEPMATE_MONGODB_HOST}:{SLEEPMATE_MONGODB_PORT}/"
 )
+
+SLEEPMATE_CONFIRMATION_WORDS = [
+    "k",
+    "okay",
+    "ok",
+    "yes",
+    "y",
+    "sure",
+    "yeah",
+    "yep",
+    "ready",
+]
 
 SLEEPMATE_SYSTEM_DESCRIPTION = """You are a somewhat lighthearted AI clinician
 skilled in Motivational Interviewing and Acceptance and Commitment Therapy. You

@@ -9,6 +9,7 @@ from mongoengine import ReferenceField
 from .goal import goal_refused
 from .helpful_scripts import (
     Goal,
+    get_confirmation_str,
     get_date_fields,
     json_dumps,
     mongo_to_json,
@@ -68,8 +69,7 @@ def get_json_exercise_entry(entry: dict) -> str:
 
 @set_attribute("return_direct", False)
 def save_exercise_entry(memory: ReadOnlySharedMemory, goal: Goal, utterance: str):
-    """Saves the exercise entry to the database *only* after the exercise is
-    complete."""
+    """Use this to save the exercise entry to the database."""
     entry = get_exercise_entry_from_memory(memory)
     if entry is not None:
         print(f"save_exercise_entry {entry=}")
@@ -99,8 +99,7 @@ def get_date_exercise_entry(memory: ReadOnlySharedMemory, goal: Goal, utterance:
 
 @set_attribute("return_direct", False)
 def get_exercise_dates(memory: ReadOnlySharedMemory, goal: Goal, utterance: str):
-    """Returns the dates of all exercise entries in JSON format.
-    Call with exactly one argument."""
+    """Returns the dates of all exercise entries in JSON format."""
     return json_dumps(
         [e.date for e in DBExerciseEntry.objects(user=get_current_user())]
     )
@@ -193,11 +192,12 @@ seriously. You have to notice them and evaluate them to try to change them,
 which may strengthen their hold over your mind and wake you up.
 """
 
-EXERCISE_CONFIRMATION = """
-Ask if now is a good time to perform the exercise then guide them through one
-step at a time. Don't give all the steps at once. Wait for them to complete each
-step. When the human completed the exercise, ask how they're feeling. Summarise
-with the following fields:
+EXERCISE_CONFIRMATION = f"""
+Ask if now is a good time to perform the exercise. Once they confirm by saying
+something like {get_confirmation_str()}, guide them through one step at a time.
+Don't give all the steps at once. Wait for them to complete each step. When the
+human completed the exercise, ask how they're feeling. Summarise with the
+following fields:
 
 - name of the exercise
 - how the human was feeling before and after the exercise.
