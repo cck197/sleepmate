@@ -14,10 +14,6 @@ SLEEPMATE_DATADIR = os.environ.get("SLEEPMATE_DATADIR", "data")
 SLEEPMATE_MAX_TOKENS = os.environ.get("SLEEPMATE_MAX_TOKENS", 8192)
 DEBUG = os.environ.get("DEBUG", False)
 SLEEPMATE_STOP_SEQUENCE = os.environ.get("SLEEPMATE_STOP_SEQUENCE", "###")
-SLEEPMATE_NAME_QUESTION = os.environ.get("SLEEPMATE_NAME_QUESTION", "what's your name?")
-SLEEPMATE_EMAIL_QUESTION = os.environ.get(
-    "SLEEPMATE_EMAIL_QUESTION", "what's your email?"
-)
 if DEBUG:
     import langchain
 

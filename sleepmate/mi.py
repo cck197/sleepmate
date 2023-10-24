@@ -20,6 +20,16 @@ def get_completion(
     return chain.run(utterance)
 
 
+def get_capabilities(memory: ReadOnlySharedMemory, goal: Goal, utterance: str) -> str:
+    """Use this when the human asks about your capabilities or what you can do.
+    Tell them that you can help them deal with unwanted thoughts and feelings
+    and find motivation to consistently engage in the health behaviours
+    conducive to satisfying and restorative sleep."""
+    return get_completion(
+        memory, utterance, get_template(goal, get_capabilities.__doc__)
+    )
+
+
 def get_greeting(memory: ReadOnlySharedMemory, goal: Goal, utterance: str) -> str:
     """Use this when the human says hello. Get their name from the conversation
     below. If you don't their name, ask.  Otherwise, greet them by name. Also
@@ -71,4 +81,10 @@ def get_listening_statement(
     )
 
 
-TOOLS = [get_listening_statement, get_open_question, get_affirmation, get_greeting]
+TOOLS = [
+    get_listening_statement,
+    get_open_question,
+    get_affirmation,
+    get_greeting,
+    get_capabilities,
+]

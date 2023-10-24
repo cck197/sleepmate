@@ -23,9 +23,7 @@ from .audio import play
 from .config import (
     SLEEPMATE_AGENT_MODEL_NAME,
     SLEEPMATE_DEFAULT_MODEL_NAME,
-    SLEEPMATE_EMAIL_QUESTION,
     SLEEPMATE_MONGODB_CONNECTION_STRING,
-    SLEEPMATE_NAME_QUESTION,
     SLEEPMATE_SAMPLING_TEMPERATURE,
     SLEEPMATE_STOP_SEQUENCE,
 )
@@ -162,7 +160,7 @@ class X(object):
         agent = OpenAIFunctionsAgent(
             llm=ChatOpenAI(temperature=0, model=SLEEPMATE_AGENT_MODEL_NAME),
             tools=get_tools(self.tools, self.ro_memory, self.goal),
-            prompt=get_agent_prompt(self.goal),
+            prompt=self.get_agent_prompt(),
         )
         self.agent_executor = AgentExecutor(
             agent=agent, tools=agent.tools, memory=self.memory
@@ -172,17 +170,6 @@ class X(object):
         self.goal_refused = goal_refused
         if goal_refused:
             add_goal_refused(self.goal.key)
-
-    def add_user_to_memory(self) -> None:
-        """Add the user to memory if they haven't already been added."""
-        if self.add_user and not find_human_messages(
-            self.memory.chat_memory.messages,
-            [SLEEPMATE_NAME_QUESTION, SLEEPMATE_EMAIL_QUESTION],
-        ):
-            self.memory.chat_memory.add_ai_message(SLEEPMATE_NAME_QUESTION)
-            self.memory.chat_memory.add_user_message(self.db_user.name)
-            self.memory.chat_memory.add_ai_message(SLEEPMATE_EMAIL_QUESTION)
-            self.memory.chat_memory.add_user_message(self.db_user.email)
 
     def __call__(self, *args, **kwargs) -> bool:
         return self.say(*args, **kwargs)
@@ -198,7 +185,12 @@ class X(object):
             self.goal = goal
             self.set_agent()
 
-        output = self.agent_executor.run(utterance, callbacks=[self.stop_handler])
+        output = self.agent_executor.run(
+            input=utterance,
+            # name=self.db_user.name,
+            # email=self.db_user.email,
+            callbacks=[self.stop_handler],
+        )
         # print(output)
         if self.audio:
             play(output)
@@ -226,7 +218,6 @@ class X(object):
             ),
         )
         self.ro_memory = ReadOnlySharedMemory(memory=self.memory)
-        self.add_user_to_memory()
 
     def delete_chat_history(self, N=10):
         """Delete the last N chat history entries."""
@@ -235,18 +226,19 @@ class X(object):
         ids_to_delete = [doc["_id"] for doc in cursor]
         collection.delete_many({"_id": {"$in": ids_to_delete}})
 
+    def get_agent_prompt(self, rigid=False) -> ChatPromptTemplate:
+        system = get_system_prompt(self.goal, user=self.db_user)
+        messages = [
+            SystemMessagePromptTemplate.from_template(system),
+            MessagesPlaceholder(variable_name="chat_history"),
+            HumanMessagePromptTemplate.from_template("{input}"),
+            MessagesPlaceholder(variable_name="agent_scratchpad"),
+        ]
+        # nuclear option - set the goal as a system message, thus overriding the
+        # agent's prediction of what to do next
+        if rigid:
+            messages.insert(
+                -1, SystemMessagePromptTemplate.from_template(str(self.goal))
+            )
 
-def get_agent_prompt(goal: Goal, rigid=False) -> ChatPromptTemplate:
-    system = get_system_prompt(goal)
-    messages = [
-        SystemMessagePromptTemplate.from_template(system),
-        MessagesPlaceholder(variable_name="chat_history"),
-        HumanMessagePromptTemplate.from_template("{input}"),
-        MessagesPlaceholder(variable_name="agent_scratchpad"),
-    ]
-    # nuclear option - set the goal as a system message, thus overriding the
-    # agent's prediction of what to do next
-    if rigid:
-        messages.insert(-1, SystemMessagePromptTemplate.from_template(str(goal)))
-
-    return ChatPromptTemplate.from_messages(messages)
+        return ChatPromptTemplate.from_messages(messages)

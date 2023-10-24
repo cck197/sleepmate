@@ -144,6 +144,7 @@ class Goal:
 
 def get_system_prompt(
     goal: Goal,
+    user=None,
     stop_sequence: str = SLEEPMATE_STOP_SEQUENCE,
 ) -> str:
     system = SLEEPMATE_SYSTEM_DESCRIPTION
@@ -163,6 +164,8 @@ def get_system_prompt(
             f"{system}\nWhen the goal is achieved, ask the human to "
             "let you know when they're ready to continue on their health journey."
         )
+    if user is not None:
+        system = f"{system}\n\nThe human's name is {user.name}, and their email is {user.email}"
     return system
 
 
