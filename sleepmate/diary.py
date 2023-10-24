@@ -8,6 +8,7 @@ from mongoengine import ReferenceField
 from .goal import goal_refused
 from .helpful_scripts import (
     Goal,
+    get_confirmation_str,
     get_date_fields,
     get_start_end,
     json_dumps,
@@ -22,7 +23,7 @@ from .structured import (
     get_parsed_output,
     pydantic_to_mongoengine,
 )
-from .user import DBUser, get_current_user
+from .user import DBUser
 
 
 class SleepDiaryEntry_(BaseModel):
@@ -96,7 +97,7 @@ DBSleepDiaryEntry = pydantic_to_mongoengine(
 
 
 def save_sleep_diary_entry_to_db(
-    user: DBUser, entry: SleepDiaryEntry
+    user: str, entry: SleepDiaryEntry
 ) -> DBSleepDiaryEntry:
     entry = adjust_to_baseline_date(entry.dict())
     # delete any existing entries for this date
@@ -114,31 +115,33 @@ def get_json_diary_entry(entry: dict) -> str:
 
 
 @set_attribute("return_direct", False)
-def save_sleep_diary_entry(memory: ReadOnlySharedMemory, goal: Goal, text: str):
+def save_sleep_diary_entry(
+    memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
+):
     """Saves the diary entry to the database. Call *only* after all the diary
     entry questions have been answered."""
-    entry = create_from_positional_args(SleepDiaryEntry, text)
+    entry = create_from_positional_args(SleepDiaryEntry, utterance)
     if entry is None:
         entry = get_sleep_diary_entry_from_memory(memory)
     if entry is not None:
         print(f"save_sleep_diary_entry {entry=}")
-        save_sleep_diary_entry_to_db(get_current_user(), entry)
+        save_sleep_diary_entry_to_db(db_user_id, entry)
 
 
 @set_attribute("return_direct", False)
-def get_sleep_diary_dates(memory: ReadOnlySharedMemory, goal: Goal, utterance: str):
+def get_sleep_diary_dates(
+    memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
+):
     """Returns the dates of all sleep diary entries in JSON format."""
-    return json_dumps(
-        [e.date for e in DBSleepDiaryEntry.objects(user=get_current_user())]
-    )
+    return json_dumps([e.date for e in DBSleepDiaryEntry.objects(user=db_user_id)])
 
 
 @set_attribute("return_direct", False)
 def get_last_sleep_diary_entry(
-    memory: ReadOnlySharedMemory, goal: Goal, utterance: str
+    memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
 ):
     """Returns the last sleep diary entry."""
-    db_entry = DBSleepDiaryEntry.objects(user=get_current_user()).first()
+    db_entry = DBSleepDiaryEntry.objects(user=db_user_id).first()
     if db_entry is None:
         return "No sleep diary entries found"
     entry = db_entry.to_mongo().to_dict()
@@ -148,31 +151,29 @@ def get_last_sleep_diary_entry(
 
 @set_attribute("return_direct", False)
 def get_date_sleep_diary_entry(
-    memory: ReadOnlySharedMemory, goal: Goal, utterance: str
+    memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
 ):
     """Returns the sleep diary entry for a given date."""
     date = parse_date(utterance, default_days=1)
     (start, end) = get_start_end(date)
     db_entry = DBSleepDiaryEntry.objects(
-        user=get_current_user(), date__gte=start, date__lte=end
+        user=db_user_id, date__gte=start, date__lte=end
     ).first()
     if db_entry is None:
         return f"No sleep diary entry found for {date.date()}"
     return get_json_diary_entry(db_entry.to_mongo().to_dict())
 
 
-def diary_entry():
+def diary_entry(db_user_id: str):
     """Returns True if it's time to ask the human to record a sleep diary
     entry."""
-    if goal_refused("diary_entry"):
+    if goal_refused(db_user_id, "diary_entry"):
         return False
 
     end = datetime.combine(date.today(), time())
     start = end - timedelta(days=1)
 
-    return (
-        DBSleepDiaryEntry.objects(user=get_current_user(), date__gte=start).count() == 0
-    )
+    return DBSleepDiaryEntry.objects(user=db_user_id, date__gte=start).count() == 0
 
 
 GOAL_HANDLERS = [
@@ -182,8 +183,8 @@ GOAL_HANDLERS = [
 ]
 
 SLEEP_EFFICIENCY = """
-Include sleep sleep duration in hours and minutes and efficiency as a
-percentage.
+Very important! Include sleep sleep duration in hours and minutes and efficiency
+as a percentage.
 
 Sleep efficiency is the percentage of time spent asleep while in bed. To give
 the human a rough sense of how their sleep efficiency compares, tell them
@@ -201,7 +202,8 @@ GOALS = [
     {
         "diary_entry": f"""
         Your goal is to record a sleep diary entry for a given night. First ask
-        if now is a good time to record a diary entry.  Then guide them through
+        if now is a good time to record a diary entry. Once they confirm by
+        saying something like {get_confirmation_str()}, Then guide them through
         the following questions one at a time.  Don't give all the questions at
         once.  Wait for them to answer each question.
         
@@ -233,7 +235,7 @@ GOALS = [
 
 
 def get_sleep_diary_description(
-    memory: ReadOnlySharedMemory, goal: Goal, utterance: str
+    memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
 ) -> str:
     """Use this when the human asks what a sleep diary is. Summarise the
     numbered list of questions only. Call with exactly one string argument."""
@@ -242,6 +244,7 @@ def get_sleep_diary_description(
         utterance,
         get_template(
             goal,
+            db_user_id,
             get_sleep_diary_description.__doc__
             + GOALS[1]["diary_entry"]
             + "End by asking if they'd like the AI to help them keep a sleep diary.",

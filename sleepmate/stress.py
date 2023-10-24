@@ -9,7 +9,7 @@ from mongoengine import ReferenceField
 from .goal import goal_refused
 from .helpful_scripts import Goal, get_date_fields, mongo_to_json, set_attribute
 from .structured import fix_schema, get_parsed_output, pydantic_to_mongoengine
-from .user import DBUser, get_current_user
+from .user import DBUser
 
 ######################################################################
 # StressAudit - a record of a stress audit
@@ -43,7 +43,7 @@ def get_stress_audit_from_memory(memory: BaseMemory) -> StressAudit:
     return get_parsed_output("summarise the stress audit", memory, StressAudit)
 
 
-def save_stress_audit_to_db(user: DBUser, entry: StressAudit) -> DBStressAudit:
+def save_stress_audit_to_db(user: str, entry: StressAudit) -> DBStressAudit:
     return DBStressAudit(**{"user": user, **entry.dict()}).save()
 
 
@@ -53,33 +53,37 @@ def get_json_stress_audit(entry: dict) -> str:
 
 
 @set_attribute("return_direct", False)
-def save_stress_audit(memory: ReadOnlySharedMemory, goal: Goal, text: str):
+def save_stress_audit(
+    memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
+):
     """Saves Stress Audit to the database. Call *only* after all the Stress
     Audit questions have been answered."""
     entry = get_stress_audit_from_memory(memory)
     if entry is not None:
         print(f"save_stress_audit {entry=}")
-        save_stress_audit_to_db(get_current_user(), entry)
+        save_stress_audit_to_db(db_user_id, entry)
 
 
-def get_current_stress_audit() -> DBStressAudit:
+def get_current_stress_audit(db_user_id: str) -> DBStressAudit:
     """Returns current Stress Audit."""
-    return DBStressAudit.objects(user=get_current_user()).order_by("-id").first()
+    return DBStressAudit.objects(user=db_user_id).order_by("-id").first()
 
 
 @set_attribute("return_direct", False)
-def get_stress_audit(memory: ReadOnlySharedMemory, goal: Goal, utterance: str):
+def get_stress_audit(
+    memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
+):
     """Returns Stress Audit from the database."""
-    entry = get_current_stress_audit()
+    entry = get_current_stress_audit(db_user_id)
     print(f"get_stress_audit {entry=}")
     if entry is not None:
         return get_json_stress_audit(entry.to_mongo().to_dict())
 
 
-def stress_audit():
+def stress_audit(db_user_id: str) -> bool:
     return (
-        not goal_refused("stress_audit")
-        and DBStressAudit.objects(user=get_current_user()).count() == 0
+        not goal_refused(db_user_id, "stress_audit")
+        and DBStressAudit.objects(user=db_user_id).count() == 0
     )
 
 

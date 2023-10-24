@@ -1,5 +1,4 @@
 import json
-from copy import deepcopy
 from datetime import datetime
 from typing import List, Tuple
 
@@ -44,8 +43,11 @@ def create_from_positional_args(model_cls, text: str):
     """Create a pydantic model from positional args."""
     try:
         args = flatten_list(json.loads(text))
+    except json.JSONDecodeError:
+        args = text.split(",")
+    try:
         field_names = list(model_cls.__fields__.keys())
-        kwargs = {field: arg for field, arg in zip(field_names, args)}
+        kwargs = {field: arg.strip() for field, arg in zip(field_names, args)}
         return model_cls(**kwargs)
     except Exception as e:
         # print(f"create_from_positional_args: {e=}")

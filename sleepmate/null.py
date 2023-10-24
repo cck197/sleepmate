@@ -6,7 +6,7 @@ GOAL_HANDLERS = [
 GOALS = [
     {
         "all_for_now": """Your goal is to let the human that's all for now. Say,
-        `Let me know if you have any question, I'm happy to help. Otherwise,
-        I'll reach out to check in with you tomorrow.'""",
+        `Let me know if you have any questions, I'm happy to help. Otherwise,
+        I'll reach out to check in with you later.'""",
     }
 ]

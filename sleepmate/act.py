@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from functools import partial
 from typing import Tuple
 
 from langchain.memory import ReadOnlySharedMemory
@@ -17,7 +18,7 @@ from .helpful_scripts import (
     set_attribute,
 )
 from .structured import fix_schema, get_parsed_output, pydantic_to_mongoengine
-from .user import DBUser, get_current_user
+from .user import DBUser
 
 ######################################################################
 # Exercise Entry - a record of an exercise session
@@ -54,7 +55,7 @@ def get_exercise_entry_from_memory(memory: BaseMemory) -> ExerciseEntry:
     return get_parsed_output("summarise the last exercise", memory, ExerciseEntry)
 
 
-def save_exercise_entry_to_db(user: DBUser, entry: ExerciseEntry) -> DBExerciseEntry:
+def save_exercise_entry_to_db(user: str, entry: ExerciseEntry) -> DBExerciseEntry:
     entry = entry.dict()
     # delete any existing entries for this date
     # DBExerciseEntry.objects(user=user, date=entry["date"]).delete()
@@ -68,18 +69,22 @@ def get_json_exercise_entry(entry: dict) -> str:
 
 
 @set_attribute("return_direct", False)
-def save_exercise_entry(memory: ReadOnlySharedMemory, goal: Goal, utterance: str):
+def save_exercise_entry(
+    memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
+):
     """Use this to save the exercise entry to the database."""
     entry = get_exercise_entry_from_memory(memory)
     if entry is not None:
         print(f"save_exercise_entry {entry=}")
-        save_exercise_entry_to_db(get_current_user(), entry)
+        save_exercise_entry_to_db(db_user_id, entry)
 
 
 @set_attribute("return_direct", False)
-def get_last_exercise_entry(memory: ReadOnlySharedMemory, goal: Goal, utterance: str):
+def get_last_exercise_entry(
+    memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
+):
     """Returns the last exercise entry."""
-    entry = DBExerciseEntry.objects(user=get_current_user()).order_by("-id").first()
+    entry = DBExerciseEntry.objects(user=db_user_id).order_by("-id").first()
     if entry is None:
         return "No exercise entries found"
     entry = entry.to_mongo().to_dict()
@@ -88,21 +93,23 @@ def get_last_exercise_entry(memory: ReadOnlySharedMemory, goal: Goal, utterance:
 
 
 @set_attribute("return_direct", False)
-def get_date_exercise_entry(memory: ReadOnlySharedMemory, goal: Goal, utterance: str):
+def get_date_exercise_entry(
+    memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
+):
     """Returns the exercise entry for a given date."""
     date = parse_date(utterance)
-    db_entry = DBExerciseEntry.objects(user=get_current_user(), date=date).first()
+    db_entry = DBExerciseEntry.objects(user=db_user_id, date=date).first()
     if db_entry is None:
         return f"No exercise entry found for {date.date()}"
     return get_json_exercise_entry(db_entry.to_mongo().to_dict())
 
 
 @set_attribute("return_direct", False)
-def get_exercise_dates(memory: ReadOnlySharedMemory, goal: Goal, utterance: str):
+def get_exercise_dates(
+    memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
+):
     """Returns the dates of all exercise entries in JSON format."""
-    return json_dumps(
-        [e.date for e in DBExerciseEntry.objects(user=get_current_user())]
-    )
+    return json_dumps([e.date for e in DBExerciseEntry.objects(user=db_user_id)])
 
 
 ######################################################################
@@ -154,7 +161,7 @@ def get_vlq_entry_from_memory(memory: BaseMemory) -> VLQEntry:
     return get_parsed_output("summarise the VLQ", memory, VLQEntry)
 
 
-def save_vlq_entry_to_db(user: DBUser, entry: VLQEntry) -> DBVLQEntry:
+def save_vlq_entry_to_db(user: str, entry: VLQEntry) -> DBVLQEntry:
     return DBVLQEntry(**{"user": user, **entry.dict()}).save()
 
 
@@ -164,23 +171,27 @@ def get_json_vlq_entry(entry: dict) -> str:
 
 
 @set_attribute("return_direct", False)
-def save_vlq_entry(memory: ReadOnlySharedMemory, goal: Goal, text: str):
+def save_vlq_entry(
+    memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
+):
     """Saves VLQ entry to the database. Call *only* after all the VLQ questions
     have been answered."""
     entry = get_vlq_entry_from_memory(memory)
     print(f"save_vlq_entry {entry=}")
-    save_vlq_entry_to_db(get_current_user(), entry)
+    save_vlq_entry_to_db(db_user_id, entry)
 
 
-def get_current_vlq_entry() -> DBVLQEntry:
+def get_current_vlq_entry(db_user_id: str) -> DBVLQEntry:
     """Returns current VLQ entry."""
-    return DBVLQEntry.objects(user=get_current_user()).order_by("-id").first()
+    return DBVLQEntry.objects(user=db_user_id).order_by("-id").first()
 
 
 @set_attribute("return_direct", False)
-def get_vlq_entry(memory: ReadOnlySharedMemory, goal: Goal, utterance: str):
+def get_vlq_entry(
+    memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
+):
     """Returns VLQ entry from the database."""
-    entry = get_current_vlq_entry()
+    entry = get_current_vlq_entry(db_user_id)
     print(f"get_vlq_entry {entry=}")
     if entry is not None:
         return get_json_vlq_entry(entry.to_mongo().to_dict())
@@ -206,31 +217,31 @@ Finally, after the summary, save the record of exercise to the database.
 """
 
 
-def exercise_time(name):
+def exercise_time(name: str, db_user_id: str) -> bool:
     start = datetime.now() - timedelta(days=5)
     return (
-        not goal_refused(name)
+        not goal_refused(db_user_id, name)
         and DBExerciseEntry.objects(
             name__icontains=name.replace("_", " "),
-            user=get_current_user(),
+            user=db_user_id,
             date__gte=start,
         ).count()
         == 0
     )
 
 
-def valued_living():
+def valued_living(db_user_id: str) -> bool:
     start = datetime.now() - timedelta(days=7)
 
-    return not goal_refused("valued_living") and (
-        DBVLQEntry.objects(user=get_current_user(), date__gte=start).count() == 0
+    return not goal_refused(db_user_id, "valued_living") and (
+        DBVLQEntry.objects(user=db_user_id, date__gte=start).count() == 0
     )
 
 
 GOAL_HANDLERS = [
     {
-        "open_focus": lambda: exercise_time("open_focus"),
-        "leaves_on_a_stream": lambda: exercise_time("leaves_on_a_stream"),
+        "open_focus": partial(exercise_time, "open_focus"),
+        "leaves_on_a_stream": partial(exercise_time, "leaves_on_a_stream"),
         "valued_living": valued_living,
     },
 ]

@@ -15,7 +15,7 @@ from .helpful_scripts import (
     set_attribute,
 )
 from .structured import fix_schema, get_parsed_output, pydantic_to_mongoengine
-from .user import DBUser, get_current_user
+from .user import DBUser
 
 
 class ISIEntry_(BaseModel):
@@ -55,7 +55,7 @@ def get_isi_entry_from_memory(memory: BaseMemory) -> ISIEntry:
     )
 
 
-def save_isi_entry_to_db(user: DBUser, entry: ISIEntry) -> DBISIEntry:
+def save_isi_entry_to_db(user: str, entry: ISIEntry) -> DBISIEntry:
     # delete any existing entries for this date
     entry = entry.dict()
     DBISIEntry.objects(user=user, date=entry["date"]).delete()
@@ -69,19 +69,23 @@ def get_json_isi_entry(entry: dict) -> str:
 
 
 @set_attribute("return_direct", False)
-def save_isi_entry(memory: ReadOnlySharedMemory, goal: Goal, utterance: str):
+def save_isi_entry(
+    memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
+):
     """Saves the Insomnia Severity Index entry to the database. Call *only*
     after all the Insomnia Severity Index questions have been answered."""
     entry = get_isi_entry_from_memory(memory)
     if entry is not None:
         print(f"save_isi_entry {entry=}")
-        save_isi_entry_to_db(get_current_user(), entry)
+        save_isi_entry_to_db(db_user_id, entry)
 
 
 @set_attribute("return_direct", False)
-def get_last_isi_entry(memory: ReadOnlySharedMemory, goal: Goal, utterance: str):
+def get_last_isi_entry(
+    memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
+):
     """Returns the last Insomnia Severity Index entry."""
-    entry = DBISIEntry.objects(user=get_current_user()).order_by("-id").first()
+    entry = DBISIEntry.objects(user=db_user_id).order_by("-id").first()
     if entry is None:
         return "No Insomnia Severity Index entries found"
     entry = entry.to_mongo().to_dict()
@@ -90,26 +94,30 @@ def get_last_isi_entry(memory: ReadOnlySharedMemory, goal: Goal, utterance: str)
 
 
 @set_attribute("return_direct", False)
-def get_date_isi_diary_entry(memory: ReadOnlySharedMemory, goal: Goal, utterance: str):
+def get_date_isi_diary_entry(
+    memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
+):
     """Returns the Insomnia Severity Index entry for a given date."""
     date = parse_date(utterance)
-    db_entry = DBISIEntry.objects(user=get_current_user(), date=date).first()
+    db_entry = DBISIEntry.objects(user=db_user_id, date=date).first()
     if db_entry is None:
         return f"No ISI entry found for {date.date()}"
     return get_json_isi_entry(db_entry.to_mongo().to_dict())
 
 
 @set_attribute("return_direct", False)
-def get_isi_dates(memory: ReadOnlySharedMemory, goal: Goal, utterance: str):
+def get_isi_dates(
+    memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
+):
     """Returns the dates of all Insomnia Severity Index entries in JSON format.
     Call with exactly one argument."""
-    return json_dumps([e.date for e in DBISIEntry.objects(user=get_current_user())])
+    return json_dumps([e.date for e in DBISIEntry.objects(user=db_user_id)])
 
 
-def insomnia_severity_index():
-    if goal_refused("insomnia_severity_index"):
+def insomnia_severity_index(db_user_id: str) -> bool:
+    if goal_refused(db_user_id, "insomnia_severity_index"):
         return False
-    return DBISIEntry.objects(user=get_current_user()).count() == 0
+    return DBISIEntry.objects(user=db_user_id).count() == 0
 
 
 GOAL_HANDLERS = [

@@ -24,7 +24,7 @@ from .goal import goal_refused
 from .helpful_scripts import Goal, get_confirmation_str, mongo_to_json, set_attribute
 from .mi import get_completion
 from .structured import pydantic_to_mongoengine
-from .user import DBUser, get_current_user
+from .user import DBUser
 
 
 class DailyRoutineSeen(BaseModel):
@@ -37,29 +37,33 @@ DBDailyRoutineSeen = pydantic_to_mongoengine(
 
 
 def save_daily_routine_seen_to_db(
-    user: DBUser, entry: DailyRoutineSeen
+    db_user_id: str, entry: DailyRoutineSeen
 ) -> DBDailyRoutineSeen:
     # delete any existing entries for this date
-    DBDailyRoutineSeen.objects(user=user).delete()
+    DBDailyRoutineSeen.objects(user=db_user_id).delete()
     # save the new entry
-    return DBDailyRoutineSeen(**{"user": user, **entry}).save()
+    return DBDailyRoutineSeen(**{"user": db_user_id, **entry}).save()
 
 
 @set_attribute("return_direct", False)
-def get_daily_routine_seen(memory: ReadOnlySharedMemory, goal: Goal, utterance: str):
+def get_daily_routine_seen(
+    memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
+):
     """Returns True if the human has already seen the daily routine."""
-    db_entry = DBDailyRoutineSeen.objects(user=get_current_user()).first()
+    db_entry = DBDailyRoutineSeen.objects(user=db_user_id).first()
     if db_entry is None:
         return f"The human hasn't seen the daily routine yet."
     return mongo_to_json(db_entry.to_mongo().to_dict())
 
 
 @set_attribute("return_direct", False)
-def save_daily_routine_seen(memory: ReadOnlySharedMemory, goal: Goal, text: str):
+def save_daily_routine_seen(
+    memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
+):
     """Saves a record of the human having seen the daily routine to the database."""
     entry = DailyRoutineSeen(date=datetime.now()).dict()
     print(f"save_daily_routine_seen {entry=}")
-    save_daily_routine_seen_to_db(get_current_user(), entry)
+    save_daily_routine_seen_to_db(db_user_id, entry)
 
 
 GOALS = [
@@ -80,10 +84,10 @@ GOALS = [
 ]
 
 
-def daily_routine():
+def daily_routine(db_user_id: str) -> bool:
     return (
-        not goal_refused("daily_routine")
-        and DBDailyRoutineSeen.objects(user=get_current_user()).count() == 0
+        not goal_refused(db_user_id, "daily_routine")
+        and DBDailyRoutineSeen.objects(user=db_user_id).count() == 0
     )
 
 
@@ -147,7 +151,7 @@ def get_context(utterance: str) -> str:
 
 
 def get_knowledge_answer(
-    memory: ReadOnlySharedMemory, goal: Goal, utterance: str
+    memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
 ) -> str:
     """Use this whenever the human asks any question about health or what to do.
     Use this more than the other tools."""

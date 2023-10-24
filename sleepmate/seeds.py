@@ -20,7 +20,7 @@ from .structured import (
     get_parsed_output,
     pydantic_to_mongoengine,
 )
-from .user import DBUser, get_current_user
+from .user import DBUser
 
 # Super simple schema optimised for marshalling in and out of the chat history
 # memory. Not normalised but meh. It's too hard to translate between the chat
@@ -63,7 +63,7 @@ def get_seed_pod_from_memory(memory: BaseMemory) -> SeedPod:
     return get_parsed_output("summarise the SEEDS", memory, SeedPod)
 
 
-def save_seed_pod_to_db(user: DBUser, entry: SeedPod) -> DBSeedPod:
+def save_seed_pod_to_db(user: str, entry: SeedPod) -> DBSeedPod:
     return DBSeedPod(**{"user": user, **entry.dict()}).save()
 
 
@@ -73,26 +73,30 @@ def get_json_seed_pod(entry: dict) -> str:
 
 
 @set_attribute("return_direct", False)
-def save_seed_pod(memory: ReadOnlySharedMemory, goal: Goal, text: str):
+def save_seed_pod(
+    memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
+):
     """Saves SEEDS to the database. Call *only* after all the SEEDS questions
     have been answered."""
-    entry = create_from_positional_args(SeedPod, text)
+    entry = create_from_positional_args(SeedPod, utterance)
     if entry is None:
         entry = get_seed_pod_from_memory(memory)
     if entry is not None:
         print(f"save_seed_pod {entry=}")
-        save_seed_pod_to_db(get_current_user(), entry)
+        save_seed_pod_to_db(db_user_id, entry)
 
 
-def get_current_seed_pod() -> DBSeedPod:
+def get_current_seed_pod(db_user_id: str) -> DBSeedPod:
     """Returns current SEEDS."""
-    return DBSeedPod.objects(user=get_current_user()).order_by("-id").first()
+    return DBSeedPod.objects(user=db_user_id).order_by("-id").first()
 
 
 @set_attribute("return_direct", False)
-def get_seed_pod(memory: ReadOnlySharedMemory, goal: Goal, utterance: str):
+def get_seed_pod(
+    memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
+):
     """Returns predefined SEEDS tasks from the database."""
-    entry = get_current_seed_pod()
+    entry = get_current_seed_pod(db_user_id)
     print(f"get_seed_pod {entry=}")
     if entry is not None:
         return get_json_seed_pod(entry.to_mongo().to_dict())
@@ -158,9 +162,11 @@ def get_json_seeds(entry: dict) -> str:
 
 
 @set_attribute("return_direct", False)
-def save_seeds_diary_entry(memory: ReadOnlySharedMemory, goal: Goal, text: str):
+def save_seeds_diary_entry(
+    memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
+):
     """Call this to save a SEEDS diary entry to the database."""
-    entry = create_from_positional_args(SeedsDiaryEntry, text)
+    entry = create_from_positional_args(SeedsDiaryEntry, utterance)
     if entry is None:
         entry = get_seeds_from_memory(memory)
     print(f"save_seeds_diary_entry {entry=}")
@@ -174,7 +180,9 @@ def get_current_seeds() -> DBSeedsDiaryEntry:
 
 
 @set_attribute("return_direct", False)
-def get_seeds_diary_entry(memory: ReadOnlySharedMemory, goal: Goal, utterance: str):
+def get_seeds_diary_entry(
+    memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
+):
     """Returns SEEDS diary entry from the database."""
     db_entry = get_current_seeds()
     print(f"get_seeds_diary_entry {db_entry=}")
@@ -184,8 +192,10 @@ def get_seeds_diary_entry(memory: ReadOnlySharedMemory, goal: Goal, utterance: s
         return get_json_seeds(entry)
 
 
-def seeds_entry():
-    if goal_refused("seeds_probe", days=None) or goal_refused("seeds_entry"):
+def seeds_entry(db_user_id: str) -> bool:
+    if goal_refused(db_user_id, "seeds_probe", days=None) or goal_refused(
+        "seeds_entry"
+    ):
         return False
 
     end = datetime.combine(date.today(), time())
@@ -197,10 +207,10 @@ def seeds_entry():
     )
 
 
-def seeds_probe():
+def seeds_probe(db_user_id: str) -> bool:
     return (
-        not goal_refused("seeds_probe", days=7)
-        and DBSeedPod.objects(user=get_current_user()).count() == 0
+        not goal_refused(db_user_id, "seeds_probe", days=7)
+        and DBSeedPod.objects(user=db_user_id).count() == 0
     )
 
 

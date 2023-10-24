@@ -7,7 +7,7 @@ from mongoengine import ReferenceField
 from .goal import goal_refused
 from .helpful_scripts import Goal, mongo_to_json, set_attribute
 from .structured import pydantic_to_mongoengine
-from .user import DBUser, get_current_user
+from .user import DBUser
 
 
 class StimulusControlSeen(BaseModel):
@@ -20,7 +20,7 @@ DBStimulusControlSeen = pydantic_to_mongoengine(
 
 
 def save_stimulus_control_seen_to_db(
-    user: DBUser, entry: StimulusControlSeen
+    user: str, entry: StimulusControlSeen
 ) -> DBStimulusControlSeen:
     # delete any existing entries for this date
     DBStimulusControlSeen.objects(user=user).delete()
@@ -29,28 +29,32 @@ def save_stimulus_control_seen_to_db(
 
 
 @set_attribute("return_direct", False)
-def get_stimulus_control_seen(memory: ReadOnlySharedMemory, goal: Goal, utterance: str):
+def get_stimulus_control_seen(
+    memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
+):
     """Returns True if the human has already seen the Stimulus Control Therapy
     instructions."""
-    db_entry = DBStimulusControlSeen.objects(user=get_current_user()).first()
+    db_entry = DBStimulusControlSeen.objects(user=db_user_id).first()
     if db_entry is None:
         return f"The human hasn't seen the stimulus control yet."
     return mongo_to_json(db_entry.to_mongo().to_dict())
 
 
 @set_attribute("return_direct", False)
-def save_stimulus_control_seen(memory: ReadOnlySharedMemory, goal: Goal, text: str):
+def save_stimulus_control_seen(
+    memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
+):
     """Saves a record of the human having seen the Stimulus Control Therapy
     Instructions to the database."""
     entry = StimulusControlSeen(date=datetime.now()).dict()
     print(f"save_stimulus_control_seen {entry=}")
-    save_stimulus_control_seen_to_db(get_current_user(), entry)
+    save_stimulus_control_seen_to_db(db_user_id, entry)
 
 
-def stimulus_control():
+def stimulus_control(db_user_id: str) -> bool:
     return (
-        not goal_refused("stimulus_control")
-        and DBStimulusControlSeen.objects(user=get_current_user()).count() == 0
+        not goal_refused(db_user_id, "stimulus_control")
+        and DBStimulusControlSeen.objects(user=db_user_id).count() == 0
     )
 
 

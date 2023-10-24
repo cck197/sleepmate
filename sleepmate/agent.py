@@ -32,14 +32,13 @@ from .goal import add_goal_refused
 from .helpful_scripts import (
     Goal,
     display_markdown,
-    find_human_messages,
     flatten_dict,
-    get_system_prompt,
     import_attrs,
     json_dumps,
     set_attribute,
 )
-from .user import get_user_from_email
+from .prompt import get_system_prompt
+from .user import get_user_by_id, get_user_from_username
 
 
 @set_attribute("return_direct", False)
@@ -68,10 +67,12 @@ class CustomTool(Tool):
         return tuple(all_args), {}
 
 
-def get_tools(funcs, memory: ReadOnlySharedMemory, goal: Goal) -> list[Tool]:
+def get_tools(
+    funcs, memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str
+) -> list[Tool]:
     return [
         CustomTool.from_function(
-            func=partial(f, memory, goal),
+            func=partial(f, memory, goal, db_user_id),
             name=f.__name__,
             description=f.__doc__,
             return_direct=getattr(f, "return_direct", True),
@@ -93,6 +94,7 @@ class GoalRefusedHandler(BaseCallbackHandler):
 
 class X(object):
     DEFAULT_GOAL_LIST = [
+        "meet",
         "health_history",
         "insomnia_severity_index",
         "diary_entry",
@@ -114,7 +116,7 @@ class X(object):
         display: bool = True,
         hello: str = "",
         add_user: bool = True,
-        email: str = None,
+        username: str = None,
         goal_list: List[str] = None,
         fixed_goal: bool = False,
     ) -> None:
@@ -129,7 +131,7 @@ class X(object):
         self.audio = audio
         self.display = display
         self.add_user = add_user
-        self.db_user = get_user_from_email(email)
+        self.db_user_id = get_user_from_username(username).id if username else None
         self.goal_refused = False
         self.stop_handler = GoalRefusedHandler(self.set_goal_refused)
         self.fixed_goal = fixed_goal
@@ -139,7 +141,7 @@ class X(object):
         self.load_memory()
         self.set_agent()
         if hello is not None:
-            self.say(hello)
+            self(hello)
 
     def get_next_goal(self) -> str:
         """Returns the next goal. Calls a function in each of the goal modules
@@ -148,7 +150,11 @@ class X(object):
             return self.goal
 
         goal = next(
-            (goal_ for goal_ in self.goal_list if self.goals["GOAL_HANDLERS"][goal_]()),
+            (
+                goal_
+                for goal_ in self.goal_list
+                if self.goals["GOAL_HANDLERS"][goal_](self.db_user_id)
+            ),
             "",
         )
         return Goal(key=goal, description=self.goals["GOALS"][goal]) if goal else None
@@ -159,7 +165,7 @@ class X(object):
         # goal = self.goals["GOALS"][self.goal] if self.goal else None
         agent = OpenAIFunctionsAgent(
             llm=ChatOpenAI(temperature=0, model=SLEEPMATE_AGENT_MODEL_NAME),
-            tools=get_tools(self.tools, self.ro_memory, self.goal),
+            tools=get_tools(self.tools, self.ro_memory, self.goal, self.db_user_id),
             prompt=self.get_agent_prompt(),
         )
         self.agent_executor = AgentExecutor(
@@ -169,26 +175,27 @@ class X(object):
     def set_goal_refused(self, action: AgentAction, goal_refused: bool = True) -> None:
         self.goal_refused = goal_refused
         if goal_refused:
-            add_goal_refused(self.goal.key)
+            add_goal_refused(self.db_user_id, self.goal.key)
 
-    def __call__(self, *args, **kwargs) -> bool:
-        return self.say(*args, **kwargs)
+    def __call__(self, *args, **kwargs) -> str:
+        return self.run(*args, **kwargs)
 
-    def say(self, utterance: str = "", save: bool = True) -> bool:
+    def get_goal(self):
         self.goal_refused = False
         goal = self.get_next_goal()
-        if not utterance:
-            utterance = goal.key
         if goal != self.goal:
-            print(f"X.say {self.goal} -> {goal}")
+            print(f"{self.db_user_id} {self.goal} -> {goal}")
             # print(f"X.__call__ {goal=}")
             self.goal = goal
             self.set_agent()
+        return goal
 
+    def run(self, utterance: str = "") -> str:
+        goal = self.get_goal()
+        if not utterance:
+            utterance = goal.key
         output = self.agent_executor.run(
             input=utterance,
-            # name=self.db_user.name,
-            # email=self.db_user.email,
             callbacks=[self.stop_handler],
         )
         # print(output)
@@ -197,6 +204,15 @@ class X(object):
         if self.display:
             display_markdown(output)
         return output
+
+    async def arun(self, utterance: str = "") -> bool:
+        goal = self.get_goal()
+        if not utterance:
+            utterance = goal.key
+        return await self.agent_executor.arun(
+            input=utterance,
+            callbacks=[self.stop_handler],
+        )
 
     def load_memory(
         self,
@@ -213,7 +229,7 @@ class X(object):
             k=k,
             chat_memory=MongoDBChatMessageHistory(
                 SLEEPMATE_MONGODB_CONNECTION_STRING,
-                self.db_user.id,
+                self.db_user_id,
                 database_name=SLEEPMATE_MONGODB_NAME,
             ),
         )
@@ -227,7 +243,7 @@ class X(object):
         collection.delete_many({"_id": {"$in": ids_to_delete}})
 
     def get_agent_prompt(self, rigid=False) -> ChatPromptTemplate:
-        system = get_system_prompt(self.goal, user=self.db_user)
+        system = get_system_prompt(self.goal, get_user_by_id(self.db_user_id))
         messages = [
             SystemMessagePromptTemplate.from_template(system),
             MessagesPlaceholder(variable_name="chat_history"),

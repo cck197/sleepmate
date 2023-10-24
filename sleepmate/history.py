@@ -20,7 +20,7 @@ from .structured import (
     get_parsed_output,
     pydantic_to_mongoengine,
 )
-from .user import DBUser, get_current_user
+from .user import DBUser
 
 
 class HealthHistory_(BaseModel):
@@ -71,15 +71,13 @@ def get_health_history_from_memory(memory: BaseMemory) -> HealthHistory:
     return get_parsed_output("summarise the last Health History", memory, HealthHistory)
 
 
-def save_health_history_to_db(user: DBUser, entry: HealthHistory) -> DBHealthHistory:
+def save_health_history_to_db(db_user_id: str, entry: HealthHistory) -> DBHealthHistory:
     entry = entry.dict()
     # delete any existing entries for this date
     (start, end) = get_start_end(entry["date"])
-    DBHealthHistory.objects(
-        user=get_current_user(), date__gte=start, date__lte=end
-    ).delete()
+    DBHealthHistory.objects(user=db_user_id, date__gte=start, date__lte=end).delete()
     # save the new entry
-    return DBHealthHistory(**{"user": user, **entry}).save()
+    return DBHealthHistory(**{"user": db_user_id, **entry}).save()
 
 
 def get_json_health_history(entry: dict) -> str:
@@ -88,7 +86,9 @@ def get_json_health_history(entry: dict) -> str:
 
 
 @set_attribute("return_direct", False)
-def save_health_history(memory: ReadOnlySharedMemory, goal: Goal, utterance: str):
+def save_health_history(
+    memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
+):
     """Saves the Health History to the database *only* after all the questions
     have been answered."""
     entry = create_from_positional_args(HealthHistory, utterance)
@@ -96,13 +96,15 @@ def save_health_history(memory: ReadOnlySharedMemory, goal: Goal, utterance: str
         entry = get_health_history_from_memory(memory)
     if entry is not None:
         print(f"save_health_history {entry=}")
-        save_health_history_to_db(get_current_user(), entry)
+        save_health_history_to_db(db_user_id, entry)
 
 
 @set_attribute("return_direct", False)
-def get_last_health_history(memory: ReadOnlySharedMemory, goal: Goal, utterance: str):
+def get_last_health_history(
+    memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
+):
     """Returns the last Health History entry."""
-    entry = DBHealthHistory.objects(user=get_current_user()).order_by("-id").first()
+    entry = DBHealthHistory.objects(user=db_user_id).order_by("-id").first()
     if entry is None:
         return "No Health History found"
     entry = entry.to_mongo().to_dict()
@@ -110,11 +112,11 @@ def get_last_health_history(memory: ReadOnlySharedMemory, goal: Goal, utterance:
     return get_json_health_history(entry)
 
 
-def health_history():
+def health_history(db_user_id: str):
     """Returns True if a Health History should happen."""
-    if goal_refused("health_history"):
+    if goal_refused(db_user_id, "health_history"):
         return False
-    return DBHealthHistory.objects(user=get_current_user()).count() == 0
+    return DBHealthHistory.objects(user=db_user_id).count() == 0
 
 
 GOAL_HANDLERS = [

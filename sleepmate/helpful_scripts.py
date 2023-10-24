@@ -9,19 +9,8 @@ from typing import List
 from dateutil.parser import ParserError
 from dateutil.parser import parse as date_parser
 from IPython.display import Markdown, display
-from langchain.prompts import (
-    ChatPromptTemplate,
-    HumanMessagePromptTemplate,
-    MessagesPlaceholder,
-    SystemMessagePromptTemplate,
-)
-from langchain.schema import AIMessage, HumanMessage
 
-from .config import (
-    SLEEPMATE_CONFIRMATION_WORDS,
-    SLEEPMATE_STOP_SEQUENCE,
-    SLEEPMATE_SYSTEM_DESCRIPTION,
-)
+from .config import SLEEPMATE_CONFIRMATION_WORDS
 
 
 def get_confirmation_str():
@@ -142,53 +131,14 @@ class Goal:
         return self.key
 
 
-def get_system_prompt(
-    goal: Goal,
-    user=None,
-    stop_sequence: str = SLEEPMATE_STOP_SEQUENCE,
-) -> str:
-    system = SLEEPMATE_SYSTEM_DESCRIPTION
-    if goal is not None:
-        system = (
-            f"{system}\n{goal.description}\n"
-            "Very important! Don't ask the human how you can assist them. "
-            "Instead, get to the goal as quickly as possible.\n"
-        )
-        if stop_sequence:
-            system = (
-                f"{system}\nIf and only if the human refuses the goal, "
-                "output a listening statement followed by "
-                f"{stop_sequence} to end the conversation."
-            )
-        system = (
-            f"{system}\nWhen the goal is achieved, ask the human to "
-            "let you know when they're ready to continue on their health journey."
-        )
-    if user is not None:
-        system = f"{system}\n\nThe human's name is {user.name}, and their email is {user.email}"
-    return system
-
-
-def get_template(goal: Goal, prompt: str) -> ChatPromptTemplate:
-    system = get_system_prompt(goal)
-    return ChatPromptTemplate(
-        messages=[
-            SystemMessagePromptTemplate.from_template(f"{system}\n{prompt}"),
-            # The `variable_name` here is what must align with memory
-            MessagesPlaceholder(variable_name="chat_history"),
-            HumanMessagePromptTemplate.from_template("{input}"),
-        ]
-    )
-
-
-def find_human_messages(messages, queries):
-    """Find the human messages that follow the given queries."""
-    # queries = ["what's your name?", "what's your email?"]
-    results = {}
-    for query in queries:
-        for i, msg in enumerate(messages):
-            if isinstance(msg, AIMessage) and msg.content == query:
-                if i + 1 < len(messages) and isinstance(messages[i + 1], HumanMessage):
-                    results[query] = messages[i + 1].content
-                    break
-    return results
+# def find_human_messages(messages, queries):
+#     """Find the human messages that follow the given queries."""
+#     # queries = ["what's your name?", "what's your email?"]
+#     results = {}
+#     for query in queries:
+#         for i, msg in enumerate(messages):
+#             if isinstance(msg, AIMessage) and msg.content == query:
+#                 if i + 1 < len(messages) and isinstance(messages[i + 1], HumanMessage):
+#                     results[query] = messages[i + 1].content
+#                     break
+#     return results
