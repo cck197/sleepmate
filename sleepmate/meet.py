@@ -1,10 +1,14 @@
+import logging
+
 from langchain.memory import ReadOnlySharedMemory
 from langchain.schema import BaseMemory
 
 from .goal import goal_refused
 from .helpful_scripts import Goal, get_confirmation_str, set_attribute
-from .structured import create_from_positional_args, get_parsed_output
+from .structured import get_parsed_output
 from .user import DBUser, User, get_user_by_id
+
+log = logging.getLogger(__name__)
 
 
 def get_user_from_memory(memory: BaseMemory) -> User:
@@ -17,7 +21,7 @@ def save_user(
 ):
     """Use this to save the human's name and email address to the database."""
     entry = get_user_from_memory(memory)
-    print(f"save_user {entry=}")
+    log.info(f"save_user {entry=}")
     if entry is not None:
         d = entry.dict()
         d.pop("username", None)

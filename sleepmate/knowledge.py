@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 from pathlib import Path
 
@@ -25,6 +26,8 @@ from .helpful_scripts import Goal, get_confirmation_str, mongo_to_json, set_attr
 from .mi import get_completion
 from .structured import pydantic_to_mongoengine
 from .user import DBUser
+
+log = logging.getLogger(__name__)
 
 
 class DailyRoutineSeen(BaseModel):
@@ -62,7 +65,7 @@ def save_daily_routine_seen(
 ):
     """Saves a record of the human having seen the daily routine to the database."""
     entry = DailyRoutineSeen(date=datetime.now()).dict()
-    print(f"save_daily_routine_seen {entry=}")
+    log.info(f"save_daily_routine_seen {entry=}")
     save_daily_routine_seen_to_db(db_user_id, entry)
 
 
@@ -125,9 +128,9 @@ def load_input_files(path="data", overwrite=False):
     for file in dir.iterdir():
         loader_cls = loader_map.get(file.suffix)
         if loader_cls is None:
-            print(f"skipping `{file}'")
+            log.info(f"skipping `{file}'")
             continue
-        print(f"loading `{file}'")
+        log.info(f"loading `{file}'")
         # the split part is important, otherwise we get similarity search
         # results that are too long for the model context window
         pages.extend(loader_cls(str(file)).load_and_split())

@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 
 from langchain.memory import ReadOnlySharedMemory
@@ -8,6 +9,8 @@ from .goal import goal_refused
 from .helpful_scripts import Goal, mongo_to_json, set_attribute
 from .structured import pydantic_to_mongoengine
 from .user import DBUser
+
+log = logging.getLogger(__name__)
 
 
 class StimulusControlSeen(BaseModel):
@@ -47,7 +50,7 @@ def save_stimulus_control_seen(
     """Saves a record of the human having seen the Stimulus Control Therapy
     Instructions to the database."""
     entry = StimulusControlSeen(date=datetime.now()).dict()
-    print(f"save_stimulus_control_seen {entry=}")
+    log.info(f"save_stimulus_control_seen {entry=}")
     save_stimulus_control_seen_to_db(db_user_id, entry)
 
 

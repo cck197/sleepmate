@@ -1,16 +1,24 @@
 import importlib
 import json
+import logging
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import List
 
+import coloredlogs
 from dateutil.parser import ParserError
 from dateutil.parser import parse as date_parser
 from IPython.display import Markdown, display
 
 from .config import SLEEPMATE_CONFIRMATION_WORDS
+
+
+def setup_logging(log_level=logging.INFO):
+    fmt = "{asctime} {levelname:<8} {name} {message}"
+    datefmt = "%Y-%m-%d %H:%M:%S"
+    coloredlogs.install(level=log_level, fmt=fmt, datefmt=datefmt, style="{")
 
 
 def get_confirmation_str():
@@ -129,16 +137,3 @@ class Goal:
 
     def __repr__(self) -> str:
         return self.key
-
-
-# def find_human_messages(messages, queries):
-#     """Find the human messages that follow the given queries."""
-#     # queries = ["what's your name?", "what's your email?"]
-#     results = {}
-#     for query in queries:
-#         for i, msg in enumerate(messages):
-#             if isinstance(msg, AIMessage) and msg.content == query:
-#                 if i + 1 < len(messages) and isinstance(messages[i + 1], HumanMessage):
-#                     results[query] = messages[i + 1].content
-#                     break
-#     return results

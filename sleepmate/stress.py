@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 from typing import List
 
@@ -10,6 +11,8 @@ from .goal import goal_refused
 from .helpful_scripts import Goal, get_date_fields, mongo_to_json, set_attribute
 from .structured import fix_schema, get_parsed_output, pydantic_to_mongoengine
 from .user import DBUser
+
+log = logging.getLogger(__name__)
 
 ######################################################################
 # StressAudit - a record of a stress audit
@@ -60,7 +63,7 @@ def save_stress_audit(
     Audit questions have been answered."""
     entry = get_stress_audit_from_memory(memory)
     if entry is not None:
-        print(f"save_stress_audit {entry=}")
+        log.info(f"save_stress_audit {entry=}")
         save_stress_audit_to_db(db_user_id, entry)
 
 
@@ -75,7 +78,7 @@ def get_stress_audit(
 ):
     """Returns Stress Audit from the database."""
     entry = get_current_stress_audit(db_user_id)
-    print(f"get_stress_audit {entry=}")
+    log.info(f"get_stress_audit {entry=}")
     if entry is not None:
         return get_json_stress_audit(entry.to_mongo().to_dict())
 

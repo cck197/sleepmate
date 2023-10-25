@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 
 from langchain.memory import ReadOnlySharedMemory
@@ -16,6 +17,8 @@ from .helpful_scripts import (
 )
 from .structured import fix_schema, get_parsed_output, pydantic_to_mongoengine
 from .user import DBUser
+
+log = logging.getLogger(__name__)
 
 
 class ISIEntry_(BaseModel):
@@ -76,7 +79,7 @@ def save_isi_entry(
     after all the Insomnia Severity Index questions have been answered."""
     entry = get_isi_entry_from_memory(memory)
     if entry is not None:
-        print(f"save_isi_entry {entry=}")
+        log.info(f"save_isi_entry {entry=}")
         save_isi_entry_to_db(db_user_id, entry)
 
 
@@ -89,7 +92,7 @@ def get_last_isi_entry(
     if entry is None:
         return "No Insomnia Severity Index entries found"
     entry = entry.to_mongo().to_dict()
-    print(f"get_last_isi_entry {entry=}")
+    log.info(f"get_last_isi_entry {entry=}")
     return get_json_isi_entry(entry)
 
 

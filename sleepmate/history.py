@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 
 from langchain.memory import ReadOnlySharedMemory
@@ -14,13 +15,10 @@ from .helpful_scripts import (
     parse_date,
     set_attribute,
 )
-from .structured import (
-    create_from_positional_args,
-    fix_schema,
-    get_parsed_output,
-    pydantic_to_mongoengine,
-)
+from .structured import fix_schema, get_parsed_output, pydantic_to_mongoengine
 from .user import DBUser
+
+log = logging.getLogger(__name__)
 
 
 class HealthHistory_(BaseModel):
@@ -68,7 +66,12 @@ DBHealthHistory = pydantic_to_mongoengine(
 
 
 def get_health_history_from_memory(memory: BaseMemory) -> HealthHistory:
-    return get_parsed_output("summarise the last Health History", memory, HealthHistory)
+    return get_parsed_output(
+        "summarise the answers the human gave for their health history",
+        memory,
+        HealthHistory,
+        k=(len(HealthHistory.__fields__) * 2) + 5,
+    )
 
 
 def save_health_history_to_db(db_user_id: str, entry: HealthHistory) -> DBHealthHistory:
@@ -91,11 +94,10 @@ def save_health_history(
 ):
     """Saves the Health History to the database *only* after all the questions
     have been answered."""
-    entry = create_from_positional_args(HealthHistory, utterance)
-    if entry is None:
-        entry = get_health_history_from_memory(memory)
+    entry = get_health_history_from_memory(memory)
+    print(f"{entry=}")
     if entry is not None:
-        print(f"save_health_history {entry=}")
+        log.info(f"save_health_history {entry=}")
         save_health_history_to_db(db_user_id, entry)
 
 
@@ -108,7 +110,7 @@ def get_last_health_history(
     if entry is None:
         return "No Health History found"
     entry = entry.to_mongo().to_dict()
-    print(f"get_last_health_history {entry=}")
+    log.info(f"get_last_health_history {entry=}")
     return get_json_health_history(entry)
 
 
@@ -157,11 +159,9 @@ GOALS = [
         19. What have you tried previously that didn't help?
         20. Anything else you'd like to add?
 
-        Once you have ALL the answers to the above, STOP! Summarise the results
-        in a bullet list and ask if they're correct.
-
-        Important: don't save the entry until the human has confirmed! Then save
-        the Health History to the database.
+        Once you have ALL the answers to the above, save the Health History to
+        the database. Retrieve the last Health History entry from the database
+        and summarise it to the human.
         """
     }
 ]

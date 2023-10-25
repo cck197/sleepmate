@@ -1,4 +1,5 @@
 import json
+import logging
 from datetime import datetime
 from typing import List, Tuple
 
@@ -26,6 +27,8 @@ from mongoengine import (
 from .config import SLEEPMATE_PARSER_MODEL_NAME
 from .helpful_scripts import flatten_list
 
+log = logging.getLogger(__name__)
+
 
 def fix_schema(cls, date_fields):
     """Remove the format from date fields to keep the PydanticOutputParser
@@ -50,16 +53,19 @@ def create_from_positional_args(model_cls, text: str):
         kwargs = {field: arg.strip() for field, arg in zip(field_names, args)}
         return model_cls(**kwargs)
     except Exception as e:
-        # print(f"create_from_positional_args: {e=}")
-        pass
+        log.debug(f"create_from_positional_args: {e=}")
 
 
 def get_parsed_output(
-    query: str, memory: ReadOnlySharedMemory, cls: BaseModel
+    query: str, memory: ReadOnlySharedMemory, cls: BaseModel, k: int = None
 ) -> BaseModel:
     """Get the parsed output from chat_history"""
     # Set up a parser + inject instructions into the prompt template.
     parser = PydanticOutputParser(pydantic_object=cls)
+    # if we're going to extract all the fields from the chat history, we need to
+    # make sure the history is at least twice as long in order to extract them all
+    if k is None:
+        k = k = (len(cls.__fields__) * 2) + 5
 
     prompt = PromptTemplate(
         template="Answer the user query.\n{format_instructions}\n{query}\n"
@@ -73,14 +79,17 @@ def get_parsed_output(
         # the prompt template expects a string, so we need to set this to False
         return_messages = memory.memory.return_messages
         memory.memory.return_messages = False
+        k_ = memory.memory.k
+        memory.memory.k = k
         chain = LLMChain(llm=llm, prompt=prompt, memory=memory)
         output = chain({"query": query})
         return parser.parse(output["text"])
     except OutputParserException as e:
-        print(f"get_parsed_output: {e=}")
+        log.debug(f"get_parsed_output: {e=}")
         return None
     finally:
         memory.memory.return_messages = return_messages
+        memory.memory.k = k_
 
 
 def pydantic_to_mongoengine(pydantic_model, extra_fields=None):

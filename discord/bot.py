@@ -1,7 +1,9 @@
+import logging
 import os
 
 import discord
 from sleepmate.agent import X
+from sleepmate.config import SLEEPMATE_DISCORD_CHANNEL_EXCLUDE
 from sleepmate.user import get_user_from_username
 
 TOKEN = os.getenv("DISCORD_TOKEN")
@@ -14,10 +16,12 @@ intents.message_content = True
 
 client = discord.Client(intents=intents)
 
+log = logging.getLogger("discord.bot")
+
 
 @client.event
 async def on_ready():
-    print(f"We have logged in as {client.user}")
+    log.info(f"logged in as {client.user}")
 
 
 def get_db_user(author):
@@ -26,12 +30,16 @@ def get_db_user(author):
 
 @client.event
 async def on_message(message):
+    if message.channel.name in SLEEPMATE_DISCORD_CHANNEL_EXCLUDE:
+        log.info(f"ignoring message in {message.channel.name}")
+        return
+
     if message.author == client.user:
         return
 
     async with message.channel.typing():
         db_user = get_db_user(message.author)
-        x = X(username=db_user.username, hello=None)
+        x = X(username=db_user.username, hello=None, log_=log)
         await message.channel.send(await x.arun(message.content))
 
 

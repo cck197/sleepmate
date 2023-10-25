@@ -1,3 +1,4 @@
+import logging
 from datetime import date, datetime, time, timedelta
 
 from dateutil.parser import parse as date_parser
@@ -21,6 +22,8 @@ from .structured import (
     pydantic_to_mongoengine,
 )
 from .user import DBUser
+
+log = logging.getLogger(__name__)
 
 # Super simple schema optimised for marshalling in and out of the chat history
 # memory. Not normalised but meh. It's too hard to translate between the chat
@@ -82,7 +85,7 @@ def save_seed_pod(
     if entry is None:
         entry = get_seed_pod_from_memory(memory)
     if entry is not None:
-        print(f"save_seed_pod {entry=}")
+        log.info(f"save_seed_pod {entry=}")
         save_seed_pod_to_db(db_user_id, entry)
 
 
@@ -97,7 +100,7 @@ def get_seed_pod(
 ):
     """Returns predefined SEEDS tasks from the database."""
     entry = get_current_seed_pod(db_user_id)
-    print(f"get_seed_pod {entry=}")
+    log.info(f"get_seed_pod {entry=}")
     if entry is not None:
         return get_json_seed_pod(entry.to_mongo().to_dict())
 
@@ -169,7 +172,7 @@ def save_seeds_diary_entry(
     entry = create_from_positional_args(SeedsDiaryEntry, utterance)
     if entry is None:
         entry = get_seeds_from_memory(memory)
-    print(f"save_seeds_diary_entry {entry=}")
+    log.info(f"save_seeds_diary_entry {entry=}")
     if entry is not None:
         save_seeds_diary_entry_to_db(get_current_seed_pod(), entry)
 
@@ -185,7 +188,7 @@ def get_seeds_diary_entry(
 ):
     """Returns SEEDS diary entry from the database."""
     db_entry = get_current_seeds()
-    print(f"get_seeds_diary_entry {db_entry=}")
+    log.info(f"get_seeds_diary_entry {db_entry=}")
     if db_entry is not None:
         entry = db_entry.to_mongo().to_dict()
         entry["pod"] = get_json_seed_pod(db_entry.pod.to_mongo().to_dict())

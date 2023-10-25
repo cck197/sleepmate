@@ -1,3 +1,4 @@
+import logging
 from datetime import date, datetime, time, timedelta
 
 from langchain.memory import ReadOnlySharedMemory
@@ -24,6 +25,8 @@ from .structured import (
     pydantic_to_mongoengine,
 )
 from .user import DBUser
+
+log = logging.getLogger(__name__)
 
 
 class SleepDiaryEntry_(BaseModel):
@@ -124,7 +127,7 @@ def save_sleep_diary_entry(
     if entry is None:
         entry = get_sleep_diary_entry_from_memory(memory)
     if entry is not None:
-        print(f"save_sleep_diary_entry {entry=}")
+        log.info(f"save_sleep_diary_entry {entry=}")
         save_sleep_diary_entry_to_db(db_user_id, entry)
 
 
@@ -145,7 +148,7 @@ def get_last_sleep_diary_entry(
     if db_entry is None:
         return "No sleep diary entries found"
     entry = db_entry.to_mongo().to_dict()
-    print(f"get_last_sleep_diary_entry {entry=}")
+    log.info(f"get_last_sleep_diary_entry {entry=}")
     return get_json_diary_entry(entry)
 
 
@@ -153,7 +156,8 @@ def get_last_sleep_diary_entry(
 def get_date_sleep_diary_entry(
     memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
 ):
-    """Returns the sleep diary entry for a given date."""
+    """Returns the sleep diary entry for a given date. Use this when the human
+    asks what their sleep efficiency is."""
     date = parse_date(utterance, default_days=1)
     (start, end) = get_start_end(date)
     db_entry = DBSleepDiaryEntry.objects(

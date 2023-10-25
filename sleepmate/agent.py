@@ -1,3 +1,4 @@
+import logging
 from datetime import date
 from functools import partial
 from typing import Any, Dict, List, Tuple, Union
@@ -36,9 +37,12 @@ from .helpful_scripts import (
     import_attrs,
     json_dumps,
     set_attribute,
+    setup_logging,
 )
 from .prompt import get_system_prompt
 from .user import get_user_by_id, get_user_from_username
+
+log = logging.getLogger(__name__)
 
 
 @set_attribute("return_direct", False)
@@ -60,10 +64,7 @@ class CustomTool(Tool):
         all_args = list(args) + list(kwargs.values())
         if len(all_args) > 1:
             all_args = [json_dumps(all_args)]
-        # import pdb
-
-        # pdb.set_trace()
-        print(f"_to_args_and_kwargs {self.name=} {all_args=}")
+        # print(f"_to_args_and_kwargs {self.name=} {all_args=}")
         return tuple(all_args), {}
 
 
@@ -119,12 +120,18 @@ class X(object):
         username: str = None,
         goal_list: List[str] = None,
         fixed_goal: bool = False,
+        log_: logging.Logger = None,
     ) -> None:
+        if log_ is None:
+            setup_logging()
+            self.log = log
+        else:
+            self.log = log_
         self.fixed_goal = False
         self.goal_list = goal_list or X.DEFAULT_GOAL_LIST
         self.memory = None
         self.tools = import_attrs(["TOOLS"])["TOOLS"]
-        print(f"X() len(self.tools)={len(self.tools)}")
+        self.log.debug(f"X() len(self.tools)={len(self.tools)}")
         self.goals = flatten_dict(import_attrs(["GOALS", "GOAL_HANDLERS"]))
         assert set(self.goal_list).issubset(set(self.goals["GOAL_HANDLERS"].keys()))
 
@@ -184,8 +191,7 @@ class X(object):
         self.goal_refused = False
         goal = self.get_next_goal()
         if goal != self.goal:
-            print(f"{self.db_user_id} {self.goal} -> {goal}")
-            # print(f"X.__call__ {goal=}")
+            self.log.info(f"{self.db_user_id} {self.goal} -> {goal}")
             self.goal = goal
             self.set_agent()
         return goal

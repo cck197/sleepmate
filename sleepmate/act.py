@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timedelta
 from functools import partial
 from typing import Tuple
@@ -19,6 +20,8 @@ from .helpful_scripts import (
 )
 from .structured import fix_schema, get_parsed_output, pydantic_to_mongoengine
 from .user import DBUser
+
+log = logging.getLogger(__name__)
 
 ######################################################################
 # Exercise Entry - a record of an exercise session
@@ -75,7 +78,7 @@ def save_exercise_entry(
     """Use this to save the exercise entry to the database."""
     entry = get_exercise_entry_from_memory(memory)
     if entry is not None:
-        print(f"save_exercise_entry {entry=}")
+        log.info(f"save_exercise_entry {entry=}")
         save_exercise_entry_to_db(db_user_id, entry)
 
 
@@ -88,7 +91,7 @@ def get_last_exercise_entry(
     if entry is None:
         return "No exercise entries found"
     entry = entry.to_mongo().to_dict()
-    print(f"get_last_exercise_entry {entry=}")
+    log.info(f"get_last_exercise_entry {entry=}")
     return get_json_exercise_entry(entry)
 
 
@@ -177,7 +180,7 @@ def save_vlq_entry(
     """Saves VLQ entry to the database. Call *only* after all the VLQ questions
     have been answered."""
     entry = get_vlq_entry_from_memory(memory)
-    print(f"save_vlq_entry {entry=}")
+    log.info(f"save_vlq_entry {entry=}")
     save_vlq_entry_to_db(db_user_id, entry)
 
 
@@ -192,7 +195,7 @@ def get_vlq_entry(
 ):
     """Returns VLQ entry from the database."""
     entry = get_current_vlq_entry(db_user_id)
-    print(f"get_vlq_entry {entry=}")
+    log.info(f"get_vlq_entry {entry=}")
     if entry is not None:
         return get_json_vlq_entry(entry.to_mongo().to_dict())
 
