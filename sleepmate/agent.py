@@ -1,10 +1,7 @@
 import logging
-from datetime import date
-from functools import partial
-from typing import Any, Dict, List, Tuple, Union
+from typing import List
 
 from langchain.agents import AgentExecutor, OpenAIFunctionsAgent
-from langchain.callbacks.base import BaseCallbackHandler
 from langchain.chat_models import ChatOpenAI
 from langchain.memory import (
     ConversationBufferWindowMemory,
@@ -18,7 +15,6 @@ from langchain.prompts import (
     SystemMessagePromptTemplate,
 )
 from langchain.schema import AgentAction
-from langchain.tools import BaseTool, Tool
 
 from .audio import play
 from .config import (
@@ -26,7 +22,6 @@ from .config import (
     SLEEPMATE_DEFAULT_MODEL_NAME,
     SLEEPMATE_MONGODB_CONNECTION_STRING,
     SLEEPMATE_SAMPLING_TEMPERATURE,
-    SLEEPMATE_STOP_SEQUENCE,
 )
 from .db import *
 from .goal import add_goal_refused
@@ -35,62 +30,12 @@ from .helpful_scripts import (
     display_markdown,
     flatten_dict,
     import_attrs,
-    json_dumps,
-    set_attribute,
     setup_logging,
 )
-from .prompt import get_system_prompt
+from .prompt import GoalRefusedHandler, get_system_prompt, get_tools
 from .user import get_user_by_id, get_user_from_username
 
 log = logging.getLogger(__name__)
-
-
-@set_attribute("return_direct", False)
-def get_date(*args, **kwargs):
-    """Returns todays date, use this for any questions related to knowing todays
-    date. This function takes any arguments and will always return today's date
-    - any date mathematics should occur outside this function."""
-    return str(date.today())
-
-
-TOOLS = [get_date]
-
-
-class CustomTool(Tool):
-    def _to_args_and_kwargs(self, tool_input: Union[str, Dict]) -> Tuple[Tuple, Dict]:
-        """Convert tool input to pydantic model."""
-        args, kwargs = BaseTool._to_args_and_kwargs(self, tool_input)
-        # For backwards compatibility. The tool must be run with a single input
-        all_args = list(args) + list(kwargs.values())
-        if len(all_args) > 1:
-            all_args = [json_dumps(all_args)]
-        # print(f"_to_args_and_kwargs {self.name=} {all_args=}")
-        return tuple(all_args), {}
-
-
-def get_tools(
-    funcs, memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str
-) -> list[Tool]:
-    return [
-        CustomTool.from_function(
-            func=partial(f, memory, goal, db_user_id),
-            name=f.__name__,
-            description=f.__doc__,
-            return_direct=getattr(f, "return_direct", True),
-        )
-        for f in funcs
-    ]
-
-
-class GoalRefusedHandler(BaseCallbackHandler):
-    def __init__(self, callback) -> None:
-        super().__init__()
-        self.callback = callback
-
-    def on_agent_finish(self, action: AgentAction, **kwargs: Any) -> Any:
-        # print(f"on_agent_finish {action}")
-        if SLEEPMATE_STOP_SEQUENCE in action.return_values["output"]:
-            self.callback(action)
 
 
 class X(object):
@@ -247,6 +192,9 @@ class X(object):
         cursor = collection.find().sort([("_id", -1)]).limit(N)
         ids_to_delete = [doc["_id"] for doc in cursor]
         collection.delete_many({"_id": {"$in": ids_to_delete}})
+
+    def clear_db(self):
+        clear_db_for_user(self.db_user_id)
 
     def get_agent_prompt(self, rigid=False) -> ChatPromptTemplate:
         system = get_system_prompt(self.goal, get_user_by_id(self.db_user_id))

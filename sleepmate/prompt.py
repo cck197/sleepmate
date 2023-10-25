@@ -1,13 +1,69 @@
+from datetime import date
+from functools import partial
+from typing import Any, Dict, Tuple, Union
+
+from langchain.callbacks.base import BaseCallbackHandler
+from langchain.memory import ReadOnlySharedMemory
 from langchain.prompts import (
     ChatPromptTemplate,
     HumanMessagePromptTemplate,
     MessagesPlaceholder,
     SystemMessagePromptTemplate,
 )
+from langchain.schema import AgentAction
+from langchain.tools import BaseTool, Tool
 
 from .config import SLEEPMATE_STOP_SEQUENCE, SLEEPMATE_SYSTEM_DESCRIPTION
-from .helpful_scripts import Goal
+from .helpful_scripts import Goal, json_dumps, set_attribute
 from .user import get_user_by_id
+
+
+class GoalRefusedHandler(BaseCallbackHandler):
+    def __init__(self, callback) -> None:
+        super().__init__()
+        self.callback = callback
+
+    def on_agent_finish(self, action: AgentAction, **kwargs: Any) -> Any:
+        # print(f"on_agent_finish {action}")
+        if SLEEPMATE_STOP_SEQUENCE in action.return_values["output"]:
+            self.callback(action)
+
+
+@set_attribute("return_direct", False)
+def get_date(*args, **kwargs):
+    """Returns todays date, use this for any questions related to knowing todays
+    date. This function takes any arguments and will always return today's date
+    - any date mathematics should occur outside this function."""
+    return str(date.today())
+
+
+TOOLS = [get_date]
+
+
+class CustomTool(Tool):
+    def _to_args_and_kwargs(self, tool_input: Union[str, Dict]) -> Tuple[Tuple, Dict]:
+        """Convert tool input to pydantic model."""
+        args, kwargs = BaseTool._to_args_and_kwargs(self, tool_input)
+        # For backwards compatibility. The tool must be run with a single input
+        all_args = list(args) + list(kwargs.values())
+        if len(all_args) > 1:
+            all_args = [json_dumps(all_args)]
+        # print(f"_to_args_and_kwargs {self.name=} {all_args=}")
+        return tuple(all_args), {}
+
+
+def get_tools(
+    funcs, memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str
+) -> list[Tool]:
+    return [
+        CustomTool.from_function(
+            func=partial(f, memory, goal, db_user_id),
+            name=f.__name__,
+            description=f.__doc__,
+            return_direct=getattr(f, "return_direct", True),
+        )
+        for f in funcs
+    ]
 
 
 def get_system_prompt(
