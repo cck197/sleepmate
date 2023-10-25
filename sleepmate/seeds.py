@@ -194,7 +194,7 @@ def get_seeds_diary_entry(
 
 def seeds_entry(db_user_id: str) -> bool:
     if goal_refused(db_user_id, "seeds_probe", days=None) or goal_refused(
-        "seeds_entry"
+        db_user_id, "seeds_entry"
     ):
         return False
 
@@ -202,7 +202,9 @@ def seeds_entry(db_user_id: str) -> bool:
     start = end - timedelta(days=1)
 
     return (
-        DBSeedsDiaryEntry.objects(pod=get_current_seed_pod(), date__gte=start).count()
+        DBSeedsDiaryEntry.objects(
+            pod=get_current_seed_pod(db_user_id), date__gte=start
+        ).count()
         == 0
     )
 

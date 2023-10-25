@@ -1,5 +1,5 @@
 GOAL_HANDLERS = [
-    {"all_for_now": lambda: True},
+    {"all_for_now": lambda db_user_id: True},
 ]
 
 

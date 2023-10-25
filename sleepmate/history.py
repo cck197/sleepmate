@@ -132,7 +132,8 @@ GOALS = [
         point questionnaire below, but don't ask until you've asked an open
         question, and the human has confirmed the accuracy of at least one
         listening statement. Ask if now would be a good time then the following
-        questions. Don't ask more than one question at time.
+        questions. Ask one question at a time. There's no need to confirm the
+        answers until the end.
         
         0. Date of entry (default to today's date)
         3. Sex
@@ -156,7 +157,7 @@ GOALS = [
         19. What have you tried previously that didn't help?
         20. Anything else you'd like to add?
 
-        Once you have all the answers to the above, STOP! Summarise the results
+        Once you have ALL the answers to the above, STOP! Summarise the results
         in a bullet list and ask if they're correct.
 
         Important: don't save the entry until the human has confirmed! Then save
