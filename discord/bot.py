@@ -37,6 +37,9 @@ async def on_message(message):
     if message.author == client.user:
         return
 
+    if message.content.startswith("!"):
+        return
+
     async with message.channel.typing():
         db_user = get_db_user(message.author)
         x = X(username=db_user.username, hello=None, log_=log)
