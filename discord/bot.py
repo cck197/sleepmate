@@ -46,4 +46,4 @@ async def on_message(message):
         await message.channel.send(await x.arun(message.content))
 
 
-client.run(TOKEN)
+client.run(TOKEN, root_logger=True)

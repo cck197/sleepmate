@@ -15,6 +15,29 @@ def get_user_from_memory(memory: BaseMemory) -> User:
     return get_parsed_output("summarise the human's details", memory, User)
 
 
+def edit_user_(db_user_id: str, key: str, utterance: str):
+    db_user = get_user_from_id(db_user_id)
+    setattr(db_user, key, utterance)
+    log.info(f"edit_user {db_user.to_mongo().to_dict()=}")
+    db_user.save()
+
+
+@set_attribute("return_direct", False)
+def edit_user_name(
+    memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
+):
+    """Use this to change the human's name."""
+    return edit_user_(db_user_id, "name", utterance)
+
+
+@set_attribute("return_direct", False)
+def edit_user_email(
+    memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
+):
+    """Use this to change the human's email."""
+    return edit_user_(db_user_id, "email", utterance)
+
+
 @set_attribute("return_direct", False)
 def save_user(
     memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
@@ -60,4 +83,4 @@ GOALS = [
     }
 ]
 
-TOOLS = [save_user]
+TOOLS = [save_user, edit_user_name, edit_user_email]

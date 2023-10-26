@@ -36,8 +36,8 @@ def get_capabilities(
 def get_greeting(
     memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
 ) -> str:
-    """Use this when the human says hello. Greet them by name. Ask them how
-    they're feeling right now, in this moment.
+    """Use this when the human says hello. Greet them by name. Occasionally ask
+    them how they're feeling right now, in this moment.
     """
     return get_completion(
         memory, utterance, get_template(goal, db_user_id, get_greeting.__doc__)

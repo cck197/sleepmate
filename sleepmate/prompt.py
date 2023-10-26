@@ -85,7 +85,7 @@ def get_system_prompt(
                 f"{stop_sequence} to end the conversation."
             )
         system = (
-            f"{system}\nWhen the goal is achieved, ask the human to say ahoy to "
+            f"{system}\nWhen the goal is achieved, ask the human to say hey to "
             "let you know when they're ready to continue on their health journey."
         )
     if db_user is not None:

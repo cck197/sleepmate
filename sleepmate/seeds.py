@@ -1,7 +1,6 @@
 import logging
 from datetime import date, datetime, time, timedelta
 
-from dateutil.parser import parse as date_parser
 from langchain.memory import ReadOnlySharedMemory
 from langchain.pydantic_v1 import BaseModel, Field, validator
 from langchain.schema import BaseMemory
@@ -13,6 +12,7 @@ from .helpful_scripts import (
     get_confirmation_str,
     get_date_fields,
     mongo_to_json,
+    parse_date,
     set_attribute,
 )
 from .structured import fix_schema, get_parsed_output, pydantic_to_mongoengine
@@ -74,9 +74,9 @@ def get_json_seed_pod(entry: dict) -> str:
 def save_seed_pod(
     memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
 ):
-    """Use this once all the SEEDS questions have been answered and the human
-    has confirmed their correctness. Saves SEEDS to the database."""
+    """Use this to save a SEEDS to the database."""
     entry = get_seed_pod_from_memory(memory)
+    log.info(f"save_seed_pod {entry=}")
     if entry is None:
         return
     save_seed_pod_to_db(db_user_id, entry)
@@ -93,7 +93,6 @@ def get_seed_pod(
 ):
     """Returns predefined SEEDS tasks from the database."""
     entry = get_current_seed_pod(db_user_id)
-    log.info(f"get_seed_pod {entry=}")
     if entry is not None:
         return get_json_seed_pod(entry.to_mongo().to_dict())
 
@@ -106,7 +105,7 @@ def get_seed_pod(
 class SeedsDiaryEntry_(BaseModel):
     """A list of completed tasks"""
 
-    date: datetime = Field(description="date of entry", default=0)
+    date: datetime = Field(description="date of entry")
     sleep_1: int = Field(description="Sleep 1", default=0)
     sleep_2: int = Field(description="Sleep 2", default=0)
     sleep_3: int = Field(description="Sleep 3", default=0)
@@ -134,7 +133,7 @@ class SeedsDiaryEntry(SeedsDiaryEntry_):
 
     @validator(*date_fields, pre=True)
     def convert_date_to_datetime(cls, value):
-        return date_parser(value)
+        return parse_date(value, default_days=1)
 
 
 DBSeedsDiaryEntry = pydantic_to_mongoengine(
@@ -161,19 +160,21 @@ def get_json_seeds(entry: dict) -> str:
 def save_seeds_diary_entry(
     memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
 ):
-    """Use this once all the SEEDS diary entry questions have been answered and
-    the human has confirmed their correctness. Saves a SEEDS diary entry to the
-    database."""
+    """Use this to save a SEEDS diary entry to the database."""
     entry = get_seeds_from_memory(memory)
     log.info(f"save_seeds_diary_entry {entry=}")
     if entry is None:
         return
-    save_seeds_diary_entry_to_db(get_current_seed_pod(), entry)
+    save_seeds_diary_entry_to_db(get_current_seed_pod(db_user_id), entry)
 
 
-def get_current_seeds() -> DBSeedsDiaryEntry:
+def get_current_seeds(db_user_id: str) -> DBSeedsDiaryEntry:
     """Returns the last SEEDS diary entry."""
-    return DBSeedsDiaryEntry.objects(pod=get_current_seed_pod()).order_by("-id").first()
+    return (
+        DBSeedsDiaryEntry.objects(pod=get_current_seed_pod(db_user_id))
+        .order_by("-id")
+        .first()
+    )
 
 
 @set_attribute("return_direct", False)
@@ -181,7 +182,7 @@ def get_seeds_diary_entry(
     memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
 ):
     """Returns SEEDS diary entry from the database."""
-    db_entry = get_current_seeds()
+    db_entry = get_current_seeds(db_user_id)
     log.info(f"get_seeds_diary_entry {db_entry=}")
     if db_entry is not None:
         entry = db_entry.to_mongo().to_dict()
@@ -296,15 +297,16 @@ GOALS = [
     },
     {
         "seeds_entry": """
-        Your goal is to ask the human about what SEEDS they managed to do today.
-        First, ask if now is a good time to record a SEEDS diary entry.
-        Summarise the SEEDS they gave earlier. Ask what date the entry is for,
-        get today's date and suggest that as a default. Then, for each SEED in
-        each pillar, ask what they got done today. Then summarise and ask if
-        it's correct. Give them a score (/15) for how many they managed to do
-        that day.
+        Your goal is to help the human record a SEEDS diary entry.
 
-        Finally, save the SEEDS diary entry to the database.
+        Steps: 
+        - Ask if now is a good time to record a SEEDS diary entry
+        - Summarise the SEEDS they gave earlier
+        - Date of entry (ask to confirm default of yesterday's date)
+        - For each SEED in each pillar, ask what they got done today
+        - Summarise all the tasks in a bullet list and ask if correct
+        - Give them a score (/15) for how many they managed to do that day
+        - Save the SEEDS diary entry to the database
         """,
     },
 ]
