@@ -23,10 +23,14 @@ def save_user(
     entry = get_user_from_memory(memory)
     log.info(f"save_user {entry=}")
     if entry is not None:
-        d = entry.dict()
-        d.pop("username", None)
         db_user = get_user_from_id(db_user_id)
-        db_user.update(**d)
+        if db_user is None:
+            return
+        # only update the database user fields if they haven't already been set
+        if db_user.name is None:
+            db_user.name = entry.name
+        if db_user.email is None:
+            db_user.email = entry.email
         db_user.save()
 
 
@@ -46,11 +50,13 @@ GOAL_HANDLERS = [
 GOALS = [
     {
         "meet": f"""
-        Greet the human then ask their name and email address. The email address
-        is so that we can be in contact offline. Once you have both their name
-        and email address, confirm they are correct.  Only once they confirm by
-        saying something like {get_confirmation_str()}, save their details to
-        the database."""
+        Greet the human then ask the following questions:
+        - What is your name?
+        - What is your email address? (so that we can be in contact offline)
+        - Confirm that the name and email address are correct.
+         
+        Only once they confirm by saying something like
+        {get_confirmation_str()}, save their details to the database."""
     }
 ]
 

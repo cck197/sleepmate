@@ -60,16 +60,19 @@ def get_sleep_diary_entry_from_memory(memory: BaseMemory) -> SleepDiaryEntry:
 
 
 def calculate_sleep_efficiency(entry: dict) -> None:
-    total_asleep = (
-        entry["final_wake_up"] - entry["tried_to_fall_asleep"]
-    ).total_seconds() / 60
-    total_asleep -= entry["time_to_fall_asleep"]
-    total_asleep -= entry["time_awake"]
+    try:
+        total_asleep = (
+            entry["final_wake_up"] - entry["tried_to_fall_asleep"]
+        ).total_seconds() / 60
+        total_asleep -= entry["time_to_fall_asleep"]
+        total_asleep -= entry["time_awake"]
 
-    total_in_bed = (entry["out_of_bed"] - entry["in_bed"]).total_seconds() / 60
+        total_in_bed = (entry["out_of_bed"] - entry["in_bed"]).total_seconds() / 60
 
-    entry["sleep_duration"] = total_asleep
-    entry["sleep_efficiency"] = (total_asleep / total_in_bed) * 100
+        entry["sleep_duration"] = total_asleep
+        entry["sleep_efficiency"] = (total_asleep / total_in_bed) * 100
+    except ZeroDivisionError:
+        log.exception("ZeroDivisionError in calculate_sleep_efficiency")
 
 
 def adjust_to_baseline_date(sleep_data: dict) -> dict:
@@ -121,7 +124,7 @@ def save_sleep_diary_entry(
     database."""
     entry = get_sleep_diary_entry_from_memory(memory)
     if entry is None:
-        return "Unable to parse sleep diary entry."
+        return
     log.info(f"save_sleep_diary_entry {entry=}")
     save_sleep_diary_entry_to_db(db_user_id, entry)
 
@@ -131,7 +134,9 @@ def get_sleep_diary_dates(
     memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
 ):
     """Returns the dates of all sleep diary entries in JSON format."""
-    return json_dumps([e.date for e in DBSleepDiaryEntry.objects(user=db_user_id)])
+    return json_dumps(
+        [e.date for e in DBSleepDiaryEntry.objects(user=db_user_id).order_by("-id")]
+    )
 
 
 @set_attribute("return_direct", False)
@@ -139,7 +144,7 @@ def get_last_sleep_diary_entry(
     memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
 ):
     """Returns the last sleep diary entry."""
-    db_entry = DBSleepDiaryEntry.objects(user=db_user_id).first()
+    db_entry = DBSleepDiaryEntry.objects(user=db_user_id).order_by("-id").first()
     if db_entry is None:
         return "No sleep diary entries found"
     entry = db_entry.to_mongo().to_dict()
@@ -155,9 +160,11 @@ def get_date_sleep_diary_entry(
     asks what their sleep efficiency is."""
     date = parse_date(utterance, default_days=1)
     (start, end) = get_start_end(date)
-    db_entry = DBSleepDiaryEntry.objects(
-        user=db_user_id, date__gte=start, date__lte=end
-    ).first()
+    db_entry = (
+        DBSleepDiaryEntry.objects(user=db_user_id, date__gte=start, date__lte=end)
+        .order_by("-id")
+        .first()
+    )
     if db_entry is None:
         return f"No sleep diary entry found for {date.date()}"
     return get_json_diary_entry(db_entry.to_mongo().to_dict())
@@ -219,10 +226,8 @@ GOALS = [
            "bad", "very bad"
         - Any medications or aids you used to help you sleep
         - Any other notes you'd like to add
+        - Summarise the results in a bullet list and ask if they're correct
         
-        Once you have all the answers to the above, STOP! Summarise the results
-        in a bullet list and ask if they're correct.
-
         Only once the human has confirmed correctness, save the diary entry to
         the database.
         

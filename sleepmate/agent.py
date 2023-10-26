@@ -17,6 +17,7 @@ from langchain.prompts import (
 from langchain.schema import AgentAction
 
 from .audio import play
+from .cache import setup_cache
 from .config import (
     SLEEPMATE_AGENT_MODEL_NAME,
     SLEEPMATE_DEFAULT_MODEL_NAME,
@@ -66,12 +67,15 @@ class X(object):
         goal_list: List[str] = None,
         fixed_goal: bool = False,
         log_: logging.Logger = None,
+        cache: bool = False,
     ) -> None:
         if log_ is None:
             setup_logging()
             self.log = log
         else:
             self.log = log_
+        if cache:
+            setup_cache()
         self.fixed_goal = False
         self.goal_list = goal_list or X.DEFAULT_GOAL_LIST
         self.memory = None

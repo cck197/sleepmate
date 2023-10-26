@@ -78,8 +78,7 @@ def save_seed_pod(
     has confirmed their correctness. Saves SEEDS to the database."""
     entry = get_seed_pod_from_memory(memory)
     if entry is None:
-        return "Unable to parse SEEDS."
-    log.info(f"save_seed_pod {entry=}")
+        return
     save_seed_pod_to_db(db_user_id, entry)
 
 
@@ -168,7 +167,7 @@ def save_seeds_diary_entry(
     entry = get_seeds_from_memory(memory)
     log.info(f"save_seeds_diary_entry {entry=}")
     if entry is None:
-        return "Unable to parse SEEDS diary entry."
+        return
     save_seeds_diary_entry_to_db(get_current_seed_pod(), entry)
 
 
