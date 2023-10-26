@@ -15,12 +15,7 @@ from .helpful_scripts import (
     mongo_to_json,
     set_attribute,
 )
-from .structured import (
-    create_from_positional_args,
-    fix_schema,
-    get_parsed_output,
-    pydantic_to_mongoengine,
-)
+from .structured import fix_schema, get_parsed_output, pydantic_to_mongoengine
 from .user import DBUser
 
 log = logging.getLogger(__name__)
@@ -79,14 +74,13 @@ def get_json_seed_pod(entry: dict) -> str:
 def save_seed_pod(
     memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
 ):
-    """Saves SEEDS to the database. Call *only* after all the SEEDS questions
-    have been answered."""
-    entry = create_from_positional_args(SeedPod, utterance)
+    """Use this once all the SEEDS questions have been answered and the human
+    has confirmed their correctness. Saves SEEDS to the database."""
+    entry = get_seed_pod_from_memory(memory)
     if entry is None:
-        entry = get_seed_pod_from_memory(memory)
-    if entry is not None:
-        log.info(f"save_seed_pod {entry=}")
-        save_seed_pod_to_db(db_user_id, entry)
+        return "Unable to parse SEEDS."
+    log.info(f"save_seed_pod {entry=}")
+    save_seed_pod_to_db(db_user_id, entry)
 
 
 def get_current_seed_pod(db_user_id: str) -> DBSeedPod:
@@ -168,13 +162,14 @@ def get_json_seeds(entry: dict) -> str:
 def save_seeds_diary_entry(
     memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
 ):
-    """Call this to save a SEEDS diary entry to the database."""
-    entry = create_from_positional_args(SeedsDiaryEntry, utterance)
-    if entry is None:
-        entry = get_seeds_from_memory(memory)
+    """Use this once all the SEEDS diary entry questions have been answered and
+    the human has confirmed their correctness. Saves a SEEDS diary entry to the
+    database."""
+    entry = get_seeds_from_memory(memory)
     log.info(f"save_seeds_diary_entry {entry=}")
-    if entry is not None:
-        save_seeds_diary_entry_to_db(get_current_seed_pod(), entry)
+    if entry is None:
+        return "Unable to parse SEEDS diary entry."
+    save_seeds_diary_entry_to_db(get_current_seed_pod(), entry)
 
 
 def get_current_seeds() -> DBSeedsDiaryEntry:
@@ -290,9 +285,14 @@ GOALS = [
 
         Collect the SEEDS from the human one category at a time. 
 
-        Finish by giving a summary of the SEEDS they defined for each category
-        and asking if they're correct. Only after they've confirmed, save the
-        SEEDS to the database.
+        Once you have all the SEEDS defined, STOP! Summarise the results
+        in a bullet list and ask if they're correct.
+
+        Only once the human has confirmed correctness, save the SEEDS to
+        the database.
+        
+        Finally, retrieve the entry from the database and
+        summarise
         """,
     },
     {

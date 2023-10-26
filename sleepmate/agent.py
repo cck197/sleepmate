@@ -33,7 +33,7 @@ from .helpful_scripts import (
     setup_logging,
 )
 from .prompt import GoalRefusedHandler, get_system_prompt, get_tools
-from .user import get_user_by_id, get_user_from_username
+from .user import get_user_from_id, get_user_from_username
 
 log = logging.getLogger(__name__)
 
@@ -186,7 +186,7 @@ class X(object):
         )
         self.ro_memory = ReadOnlySharedMemory(memory=self.memory)
 
-    def delete_chat_history(self, N=10):
+    def clear_chat_history(self, N=10):
         """Delete the last N chat history entries."""
         collection = self.memory.chat_memory.collection
         cursor = collection.find().sort([("_id", -1)]).limit(N)
@@ -197,7 +197,7 @@ class X(object):
         clear_db_for_user(self.db_user_id)
 
     def get_agent_prompt(self, rigid=False) -> ChatPromptTemplate:
-        system = get_system_prompt(self.goal, get_user_by_id(self.db_user_id))
+        system = get_system_prompt(self.goal, get_user_from_id(self.db_user_id))
         messages = [
             SystemMessagePromptTemplate.from_template(system),
             MessagesPlaceholder(variable_name="chat_history"),

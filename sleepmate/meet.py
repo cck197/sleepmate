@@ -6,7 +6,7 @@ from langchain.schema import BaseMemory
 from .goal import goal_refused
 from .helpful_scripts import Goal, get_confirmation_str, set_attribute
 from .structured import get_parsed_output
-from .user import DBUser, User, get_user_by_id
+from .user import User, get_user_from_id
 
 log = logging.getLogger(__name__)
 
@@ -25,7 +25,7 @@ def save_user(
     if entry is not None:
         d = entry.dict()
         d.pop("username", None)
-        db_user = get_user_by_id(db_user_id)
+        db_user = get_user_from_id(db_user_id)
         db_user.update(**d)
         db_user.save()
 
@@ -33,7 +33,7 @@ def save_user(
 def meet(db_user_id: str) -> bool:
     if goal_refused(db_user_id, "meet", days=7):
         return False
-    db_user = get_user_by_id(db_user_id)
+    db_user = get_user_from_id(db_user_id)
     return db_user.name is None or db_user.email is None
 
 

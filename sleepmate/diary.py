@@ -18,12 +18,7 @@ from .helpful_scripts import (
     set_attribute,
 )
 from .mi import get_completion, get_template
-from .structured import (
-    create_from_positional_args,
-    fix_schema,
-    get_parsed_output,
-    pydantic_to_mongoengine,
-)
+from .structured import fix_schema, get_parsed_output, pydantic_to_mongoengine
 from .user import DBUser
 
 log = logging.getLogger(__name__)
@@ -100,14 +95,14 @@ DBSleepDiaryEntry = pydantic_to_mongoengine(
 
 
 def save_sleep_diary_entry_to_db(
-    user: str, entry: SleepDiaryEntry
+    db_user_id: str, entry: SleepDiaryEntry
 ) -> DBSleepDiaryEntry:
     entry = adjust_to_baseline_date(entry.dict())
     # delete any existing entries for this date
     (start, end) = get_start_end(entry["date"])
-    DBSleepDiaryEntry.objects(user=user, date__gte=start, date__lte=end).delete()
+    DBSleepDiaryEntry.objects(user=db_user_id, date__gte=start, date__lte=end).delete()
     # save the new entry
-    return DBSleepDiaryEntry(**{"user": user, **entry}).save()
+    return DBSleepDiaryEntry(**{"user": db_user_id, **entry}).save()
 
 
 def get_json_diary_entry(entry: dict) -> str:
@@ -121,14 +116,14 @@ def get_json_diary_entry(entry: dict) -> str:
 def save_sleep_diary_entry(
     memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
 ):
-    """Saves the diary entry to the database. Call *only* after all the diary
-    entry questions have been answered."""
-    entry = create_from_positional_args(SleepDiaryEntry, utterance)
+    """Use this once all the sleep diary questions have been answered and the
+    human has confirmed their correctness. Saves the diary entry to the
+    database."""
+    entry = get_sleep_diary_entry_from_memory(memory)
     if entry is None:
-        entry = get_sleep_diary_entry_from_memory(memory)
-    if entry is not None:
-        log.info(f"save_sleep_diary_entry {entry=}")
-        save_sleep_diary_entry_to_db(db_user_id, entry)
+        return "Unable to parse sleep diary entry."
+    log.info(f"save_sleep_diary_entry {entry=}")
+    save_sleep_diary_entry_to_db(db_user_id, entry)
 
 
 @set_attribute("return_direct", False)
@@ -211,7 +206,7 @@ GOALS = [
         the following questions one at a time.  Don't give all the questions at
         once.  Wait for them to answer each question.
         
-        - Date of entry (default to yesterday's date)
+        - Date of entry (ask to confirm default of yesterday's date)
         - Time you went to bed 
         - Time you tried to fall asleep
         - How long it took you to fall asleep (in minutes)
@@ -228,8 +223,8 @@ GOALS = [
         Once you have all the answers to the above, STOP! Summarise the results
         in a bullet list and ask if they're correct.
 
-        Important: don't save the entry until the human has confirmed! Then save
-        the diary entry to the database.
+        Only once the human has confirmed correctness, save the diary entry to
+        the database.
         
         Finally, retrieve the entry from the database and
         summarise.  {SLEEP_EFFICIENCY}

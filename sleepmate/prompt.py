@@ -15,7 +15,7 @@ from langchain.tools import BaseTool, Tool
 
 from .config import SLEEPMATE_STOP_SEQUENCE, SLEEPMATE_SYSTEM_DESCRIPTION
 from .helpful_scripts import Goal, json_dumps, set_attribute
-from .user import get_user_by_id
+from .user import get_user_from_id
 
 
 class GoalRefusedHandler(BaseCallbackHandler):
@@ -97,7 +97,7 @@ def get_system_prompt(
 
 
 def get_template(goal: Goal, db_user_id: str, prompt: str) -> ChatPromptTemplate:
-    db_user = get_user_by_id(db_user_id)
+    db_user = get_user_from_id(db_user_id)
     system = get_system_prompt(goal, db_user)
     return ChatPromptTemplate(
         messages=[

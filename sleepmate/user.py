@@ -18,7 +18,7 @@ def get_user_from_email(email: str) -> DBUser:
     return DBUser.objects(email=email).first()
 
 
-def get_user_by_id(db_user_id: str) -> DBUser:
+def get_user_from_id(db_user_id: str) -> DBUser:
     return DBUser.objects(id=db_user_id).first()
 
 

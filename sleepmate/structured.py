@@ -42,20 +42,6 @@ def fix_schema(cls, date_fields):
     return s
 
 
-def create_from_positional_args(model_cls, text: str):
-    """Create a pydantic model from positional args."""
-    try:
-        args = flatten_list(json.loads(text))
-    except json.JSONDecodeError:
-        args = text.split(",")
-    try:
-        field_names = list(model_cls.__fields__.keys())
-        kwargs = {field: arg.strip() for field, arg in zip(field_names, args)}
-        return model_cls(**kwargs)
-    except Exception as e:
-        log.debug(f"create_from_positional_args: {e=}")
-
-
 def get_parsed_output(
     query: str, memory: ReadOnlySharedMemory, cls: BaseModel, k: int = None
 ) -> BaseModel:
@@ -85,8 +71,7 @@ def get_parsed_output(
         output = chain({"query": query})
         return parser.parse(output["text"])
     except OutputParserException as e:
-        log.debug(f"get_parsed_output: {e=}")
-        return None
+        log.error(f"get_parsed_output: {e=}")
     finally:
         memory.memory.return_messages = return_messages
         memory.memory.k = k_
