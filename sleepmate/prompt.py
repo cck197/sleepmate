@@ -1,21 +1,37 @@
-from datetime import date
+import logging
+from datetime import datetime, timedelta
 from functools import partial
-from typing import Any, Dict, Tuple, Union
+from typing import Any, Dict, List, Tuple, Union
 
 from langchain.callbacks.base import BaseCallbackHandler
-from langchain.memory import ReadOnlySharedMemory
 from langchain.prompts import (
     ChatPromptTemplate,
     HumanMessagePromptTemplate,
     MessagesPlaceholder,
     SystemMessagePromptTemplate,
 )
-from langchain.schema import AgentAction
+from langchain.schema import AgentAction, BaseMessage
 from langchain.tools import BaseTool, Tool
 
 from .config import SLEEPMATE_STOP_SEQUENCE, SLEEPMATE_SYSTEM_DESCRIPTION
 from .helpful_scripts import Goal, json_dumps, set_attribute
 from .user import get_user_from_id
+
+log = logging.getLogger(__name__)
+
+
+class MessageHandler(BaseCallbackHandler):
+    def __init__(self, callback) -> None:
+        super().__init__()
+        self.callback = callback
+
+    def on_chat_model_start(
+        self,
+        serialized: Dict[str, Any],
+        messages: List[List[BaseMessage]],
+        **kwargs: Any,
+    ) -> Any:
+        self.callback(messages)
 
 
 class GoalRefusedHandler(BaseCallbackHandler):
@@ -30,11 +46,13 @@ class GoalRefusedHandler(BaseCallbackHandler):
 
 
 @set_attribute("return_direct", False)
-def get_date(*args, **kwargs):
-    """Returns todays date, use this for any questions related to knowing todays
-    date. This function takes any arguments and will always return today's date
-    - any date mathematics should occur outside this function."""
-    return str(date.today())
+def get_date(x: object, utterance: str):
+    """Use this whenever you need to get the date. This function take one
+    argument that is the number of days to subtract from today's date. For
+    example, if you want to get yesterday's date, you would call this function
+    with 1 as the argument. And if you wanted today's date you would call this
+    with 0."""
+    return datetime.now() - timedelta(days=int(utterance))
 
 
 TOOLS = [get_date]
@@ -52,17 +70,15 @@ class CustomTool(Tool):
         return tuple(all_args), {}
 
 
-def get_tools(
-    funcs, memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str
-) -> list[Tool]:
+def get_tools(x: object) -> list[Tool]:
     return [
         CustomTool.from_function(
-            func=partial(f, memory, goal, db_user_id),
+            func=partial(f, x),
             name=f.__name__,
             description=f.__doc__,
             return_direct=getattr(f, "return_direct", True),
         )
-        for f in funcs
+        for f in x.tools
     ]
 
 

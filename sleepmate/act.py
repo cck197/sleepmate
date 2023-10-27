@@ -8,6 +8,7 @@ from langchain.pydantic_v1 import BaseModel, Field, validator
 from langchain.schema import BaseMemory
 from mongoengine import ReferenceField
 
+from .agent import BaseAgent
 from .goal import goal_refused
 from .helpful_scripts import (
     Goal,
@@ -54,8 +55,10 @@ DBExerciseEntry = pydantic_to_mongoengine(
 )
 
 
-def get_exercise_entry_from_memory(memory: BaseMemory) -> ExerciseEntry:
-    return get_parsed_output("summarise the last exercise", memory, ExerciseEntry)
+def get_exercise_entry_from_memory(x: BaseAgent) -> ExerciseEntry:
+    return get_parsed_output(
+        "summarise the last exercise", x.latest_messages, ExerciseEntry
+    )
 
 
 def save_exercise_entry_to_db(user: str, entry: ExerciseEntry) -> DBExerciseEntry:
@@ -72,22 +75,18 @@ def get_json_exercise_entry(entry: dict) -> str:
 
 
 @set_attribute("return_direct", False)
-def save_exercise_entry(
-    memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
-):
+def save_exercise_entry(x: BaseAgent, utterance: str):
     """Use this to save the exercise entry to the database."""
-    entry = get_exercise_entry_from_memory(memory)
+    entry = get_exercise_entry_from_memory(x)
     if entry is not None:
         log.info(f"save_exercise_entry {entry=}")
-        save_exercise_entry_to_db(db_user_id, entry)
+        save_exercise_entry_to_db(x.db_user_id, entry)
 
 
 @set_attribute("return_direct", False)
-def get_last_exercise_entry(
-    memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
-):
+def get_last_exercise_entry(x: BaseAgent, utterance: str):
     """Returns the last exercise entry."""
-    entry = DBExerciseEntry.objects(user=db_user_id).order_by("-id").first()
+    entry = DBExerciseEntry.objects(user=x.db_user_id).order_by("-id").first()
     if entry is None:
         return "No exercise entries found"
     entry = entry.to_mongo().to_dict()
@@ -96,23 +95,19 @@ def get_last_exercise_entry(
 
 
 @set_attribute("return_direct", False)
-def get_date_exercise_entry(
-    memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
-):
+def get_date_exercise_entry(x: BaseAgent, utterance: str):
     """Returns the exercise entry for a given date."""
     date = parse_date(utterance)
-    db_entry = DBExerciseEntry.objects(user=db_user_id, date=date).first()
+    db_entry = DBExerciseEntry.objects(user=x.db_user_id, date=date).first()
     if db_entry is None:
         return f"No exercise entry found for {date.date()}"
     return get_json_exercise_entry(db_entry.to_mongo().to_dict())
 
 
 @set_attribute("return_direct", False)
-def get_exercise_dates(
-    memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
-):
+def get_exercise_dates(x: BaseAgent, utterance: str):
     """Returns the dates of all exercise entries in JSON format."""
-    return json_dumps([e.date for e in DBExerciseEntry.objects(user=db_user_id)])
+    return json_dumps([e.date for e in DBExerciseEntry.objects(user=x.db_user_id)])
 
 
 ######################################################################
@@ -160,8 +155,8 @@ DBVLQEntry = pydantic_to_mongoengine(
 )
 
 
-def get_vlq_entry_from_memory(memory: BaseMemory) -> VLQEntry:
-    return get_parsed_output("summarise the VLQ", memory, VLQEntry)
+def get_vlq_entry_from_memory(x: BaseAgent) -> VLQEntry:
+    return get_parsed_output("summarise the VLQ", x.latest_messages, VLQEntry)
 
 
 def save_vlq_entry_to_db(user: str, entry: VLQEntry) -> DBVLQEntry:
@@ -174,14 +169,13 @@ def get_json_vlq_entry(entry: dict) -> str:
 
 
 @set_attribute("return_direct", False)
-def save_vlq_entry(
-    memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
-):
+def save_vlq_entry(x: BaseAgent, utterance: str):
     """Saves VLQ entry to the database. Call *only* after all the VLQ questions
     have been answered."""
-    entry = get_vlq_entry_from_memory(memory)
+    entry = get_vlq_entry_from_memory(x)
     log.info(f"save_vlq_entry {entry=}")
-    save_vlq_entry_to_db(db_user_id, entry)
+    if entry is not None:
+        save_vlq_entry_to_db(x.db_user_id, entry)
 
 
 def get_current_vlq_entry(db_user_id: str) -> DBVLQEntry:
@@ -190,11 +184,9 @@ def get_current_vlq_entry(db_user_id: str) -> DBVLQEntry:
 
 
 @set_attribute("return_direct", False)
-def get_vlq_entry(
-    memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
-):
+def get_vlq_entry(x: BaseAgent, utterance: str):
     """Returns VLQ entry from the database."""
-    entry = get_current_vlq_entry(db_user_id)
+    entry = get_current_vlq_entry(x.db_user_id)
     log.info(f"get_vlq_entry {entry=}")
     if entry is not None:
         return get_json_vlq_entry(entry.to_mongo().to_dict())

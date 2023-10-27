@@ -1,14 +1,12 @@
 import logging
 from datetime import date, datetime, time, timedelta
 
-from langchain.memory import ReadOnlySharedMemory
 from langchain.pydantic_v1 import BaseModel, Field, validator
-from langchain.schema import BaseMemory
 from mongoengine import ReferenceField
 
+from .agent import BaseAgent
 from .goal import goal_refused
 from .helpful_scripts import (
-    Goal,
     get_confirmation_str,
     get_date_fields,
     get_start_end,
@@ -18,6 +16,7 @@ from .helpful_scripts import (
     set_attribute,
 )
 from .mi import get_completion, get_template
+from .prompt import get_template
 from .structured import fix_schema, get_parsed_output, pydantic_to_mongoengine
 from .user import DBUser
 
@@ -53,9 +52,9 @@ class SleepDiaryEntry(SleepDiaryEntry_):
         return parse_date(value, default_days=1)
 
 
-def get_sleep_diary_entry_from_memory(memory: BaseMemory) -> SleepDiaryEntry:
+def get_sleep_diary_entry_from_memory(x: BaseAgent) -> SleepDiaryEntry:
     return get_parsed_output(
-        "summarise the last sleep diary entry", memory, SleepDiaryEntry
+        "summarise the last sleep diary entry", x.latest_messages, SleepDiaryEntry
     )
 
 
@@ -116,35 +115,29 @@ def get_json_diary_entry(entry: dict) -> str:
 
 
 @set_attribute("return_direct", False)
-def save_sleep_diary_entry(
-    memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
-):
+def save_sleep_diary_entry(x: BaseAgent, utterance: str):
     """Use this once all the sleep diary questions have been answered and the
     human has confirmed their correctness. Saves the diary entry to the
     database."""
-    entry = get_sleep_diary_entry_from_memory(memory)
+    entry = get_sleep_diary_entry_from_memory(x)
     if entry is None:
         return
     log.info(f"save_sleep_diary_entry {entry=}")
-    save_sleep_diary_entry_to_db(db_user_id, entry)
+    save_sleep_diary_entry_to_db(x.db_user_id, entry)
 
 
 @set_attribute("return_direct", False)
-def get_sleep_diary_dates(
-    memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
-):
+def get_sleep_diary_dates(x: BaseAgent, utterance: str):
     """Returns the dates of all sleep diary entries in JSON format."""
     return json_dumps(
-        [e.date for e in DBSleepDiaryEntry.objects(user=db_user_id).order_by("-id")]
+        [e.date for e in DBSleepDiaryEntry.objects(user=x.db_user_id).order_by("-id")]
     )
 
 
 @set_attribute("return_direct", False)
-def get_last_sleep_diary_entry(
-    memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
-):
+def get_last_sleep_diary_entry(x: BaseAgent, utterance: str):
     """Returns the last sleep diary entry."""
-    db_entry = DBSleepDiaryEntry.objects(user=db_user_id).order_by("-id").first()
+    db_entry = DBSleepDiaryEntry.objects(user=x.db_user_id).order_by("-id").first()
     if db_entry is None:
         return "No sleep diary entries found"
     entry = db_entry.to_mongo().to_dict()
@@ -153,15 +146,13 @@ def get_last_sleep_diary_entry(
 
 
 @set_attribute("return_direct", False)
-def get_date_sleep_diary_entry(
-    memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
-):
+def get_date_sleep_diary_entry(x: BaseAgent, utterance: str):
     """Returns the sleep diary entry for a given date. Use this when the human
     asks what their sleep efficiency is."""
     date = parse_date(utterance, default_days=1)
     (start, end) = get_start_end(date)
     db_entry = (
-        DBSleepDiaryEntry.objects(user=db_user_id, date__gte=start, date__lte=end)
+        DBSleepDiaryEntry.objects(user=x.db_user_id, date__gte=start, date__lte=end)
         .order_by("-id")
         .first()
     )
@@ -238,17 +229,15 @@ GOALS = [
 ]
 
 
-def get_sleep_diary_description(
-    memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
-) -> str:
+def get_sleep_diary_description(x: BaseAgent, utterance: str) -> str:
     """Use this when the human asks what a sleep diary is. Summarise the
     numbered list of questions only. Call with exactly one string argument."""
     return get_completion(
-        memory,
+        x.ro_memory,
         utterance,
         get_template(
-            goal,
-            db_user_id,
+            x.goal,
+            x.db_user_id,
             get_sleep_diary_description.__doc__
             + GOALS[1]["diary_entry"]
             + "End by asking if they'd like the AI to help them keep a sleep diary.",

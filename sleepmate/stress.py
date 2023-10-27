@@ -7,6 +7,7 @@ from langchain.pydantic_v1 import BaseModel, Field, validator
 from langchain.schema import BaseMemory
 from mongoengine import ReferenceField
 
+from .agent import BaseAgent
 from .goal import goal_refused
 from .helpful_scripts import Goal, get_date_fields, mongo_to_json, set_attribute
 from .structured import fix_schema, get_parsed_output, pydantic_to_mongoengine
@@ -42,8 +43,10 @@ DBStressAudit = pydantic_to_mongoengine(
 )
 
 
-def get_stress_audit_from_memory(memory: BaseMemory) -> StressAudit:
-    return get_parsed_output("summarise the stress audit", memory, StressAudit)
+def get_stress_audit_from_memory(x: BaseAgent) -> StressAudit:
+    return get_parsed_output(
+        "summarise the stress audit", x.latest_messages, StressAudit
+    )
 
 
 def save_stress_audit_to_db(user: str, entry: StressAudit) -> DBStressAudit:
@@ -56,15 +59,13 @@ def get_json_stress_audit(entry: dict) -> str:
 
 
 @set_attribute("return_direct", False)
-def save_stress_audit(
-    memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
-):
+def save_stress_audit(x: BaseAgent, utterance: str):
     """Saves Stress Audit to the database. Call *only* after all the Stress
     Audit questions have been answered."""
-    entry = get_stress_audit_from_memory(memory)
+    entry = get_stress_audit_from_memory(x)
     if entry is not None:
         log.info(f"save_stress_audit {entry=}")
-        save_stress_audit_to_db(db_user_id, entry)
+        save_stress_audit_to_db(x.db_user_id, entry)
 
 
 def get_current_stress_audit(db_user_id: str) -> DBStressAudit:
@@ -73,11 +74,9 @@ def get_current_stress_audit(db_user_id: str) -> DBStressAudit:
 
 
 @set_attribute("return_direct", False)
-def get_stress_audit(
-    memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
-):
+def get_stress_audit(x: BaseAgent, utterance: str):
     """Returns Stress Audit from the database."""
-    entry = get_current_stress_audit(db_user_id)
+    entry = get_current_stress_audit(x.db_user_id)
     log.info(f"get_stress_audit {entry=}")
     if entry is not None:
         return get_json_stress_audit(entry.to_mongo().to_dict())

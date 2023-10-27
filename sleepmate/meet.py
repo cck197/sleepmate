@@ -3,6 +3,7 @@ import logging
 from langchain.memory import ReadOnlySharedMemory
 from langchain.schema import BaseMemory
 
+from .agent import BaseAgent
 from .goal import goal_refused
 from .helpful_scripts import Goal, get_confirmation_str, set_attribute
 from .structured import get_parsed_output
@@ -11,8 +12,8 @@ from .user import User, get_user_from_id
 log = logging.getLogger(__name__)
 
 
-def get_user_from_memory(memory: BaseMemory) -> User:
-    return get_parsed_output("summarise the human's details", memory, User)
+def get_user_from_memory(x: BaseAgent) -> User:
+    return get_parsed_output("summarise the human's details", x.latest_messages, User)
 
 
 def edit_user_(db_user_id: str, key: str, utterance: str):
@@ -23,30 +24,24 @@ def edit_user_(db_user_id: str, key: str, utterance: str):
 
 
 @set_attribute("return_direct", False)
-def edit_user_name(
-    memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
-):
+def edit_user_name(x: BaseAgent, utterance: str):
     """Use this to change the human's name."""
-    return edit_user_(db_user_id, "name", utterance)
+    return edit_user_(x.db_user_id, "name", utterance)
 
 
 @set_attribute("return_direct", False)
-def edit_user_email(
-    memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
-):
+def edit_user_email(x: BaseAgent, utterance: str):
     """Use this to change the human's email."""
-    return edit_user_(db_user_id, "email", utterance)
+    return edit_user_(x.db_user_id, "email", utterance)
 
 
 @set_attribute("return_direct", False)
-def save_user(
-    memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
-):
+def save_user(x: BaseAgent, utterance: str):
     """Use this to save the human's name and email address to the database."""
-    entry = get_user_from_memory(memory)
+    entry = get_user_from_memory(x)
     log.info(f"save_user {entry=}")
     if entry is not None:
-        db_user = get_user_from_id(db_user_id)
+        db_user = get_user_from_id(x.db_user_id)
         if db_user is None:
             return
         # only update the database user fields if they haven't already been set

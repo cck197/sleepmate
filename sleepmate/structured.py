@@ -1,19 +1,18 @@
-import json
 import logging
 from datetime import datetime
 from typing import List, Tuple
 
 from langchain.chains import LLMChain
 from langchain.chat_models import ChatOpenAI
+from langchain.memory import ConversationBufferWindowMemory
 
 # kinda almost works with davinci
 # model_name = "text-davinci-003"
 # from langchain.llms import OpenAI
-from langchain.memory import ReadOnlySharedMemory
 from langchain.output_parsers import PydanticOutputParser
 from langchain.prompts import PromptTemplate
 from langchain.pydantic_v1 import BaseModel
-from langchain.schema import OutputParserException
+from langchain.schema import BaseMessage, OutputParserException
 from mongoengine import (
     BooleanField,
     DateTimeField,
@@ -25,7 +24,6 @@ from mongoengine import (
 )
 
 from .config import SLEEPMATE_PARSER_MODEL_NAME
-from .helpful_scripts import flatten_list
 
 log = logging.getLogger(__name__)
 
@@ -42,8 +40,18 @@ def fix_schema(cls, date_fields):
     return s
 
 
+def get_memory_from_messages(
+    messages: List[BaseMessage], k: int
+) -> ConversationBufferWindowMemory:
+    memory = ConversationBufferWindowMemory(
+        memory_key="chat_history", k=k, return_messages=False
+    )
+    memory.chat_memory.messages = messages
+    return memory
+
+
 def get_parsed_output(
-    query: str, memory: ReadOnlySharedMemory, cls: BaseModel, k: int = None
+    query: str, x: object, cls: BaseModel, k: int = None
 ) -> BaseModel:
     """Get the parsed output from chat_history"""
     # Set up a parser + inject instructions into the prompt template.
@@ -52,6 +60,7 @@ def get_parsed_output(
     # make sure the history is at least twice as long in order to extract them all
     if k is None:
         k = k = (len(cls.__fields__) * 2) + 5
+    memory = get_memory_from_messages(x.get_latest_messages(k=k), k=k + 1)
 
     prompt = PromptTemplate(
         template="Answer the user query.\n{format_instructions}\n{query}\n"
@@ -62,19 +71,11 @@ def get_parsed_output(
     # llm = OpenAI(model_name=model_name, temperature=0.0)
     llm = ChatOpenAI(model_name=SLEEPMATE_PARSER_MODEL_NAME, temperature=0.0)
     try:
-        # the prompt template expects a string, so we need to set this to False
-        return_messages = memory.memory.return_messages
-        memory.memory.return_messages = False
-        k_ = memory.memory.k
-        memory.memory.k = k
         chain = LLMChain(llm=llm, prompt=prompt, memory=memory)
         output = chain({"query": query})
         return parser.parse(output["text"])
     except OutputParserException as e:
         log.error(f"get_parsed_output: {e=}")
-    finally:
-        memory.memory.return_messages = return_messages
-        memory.memory.k = k_
 
 
 def pydantic_to_mongoengine(pydantic_model, extra_fields=None):

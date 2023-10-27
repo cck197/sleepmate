@@ -2,8 +2,8 @@ import logging
 import os
 
 import discord
-from sleepmate.agent import X
 from sleepmate.config import SLEEPMATE_DISCORD_CHANNEL_EXCLUDE
+from sleepmate.executor import X
 from sleepmate.user import get_user_from_username
 
 TOKEN = os.getenv("DISCORD_TOKEN")

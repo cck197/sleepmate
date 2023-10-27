@@ -16,6 +16,7 @@ from langchain.pydantic_v1 import BaseModel, Field
 from langchain.vectorstores import Chroma
 from mongoengine import ReferenceField
 
+from .agent import BaseAgent
 from .config import (
     SLEEPMATE_DATADIR,
     SLEEPMATE_DEFAULT_MODEL_NAME,
@@ -49,24 +50,20 @@ def save_daily_routine_seen_to_db(
 
 
 @set_attribute("return_direct", False)
-def get_daily_routine_seen(
-    memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
-):
+def get_daily_routine_seen(x: BaseAgent, utterance: str):
     """Returns True if the human has already seen the daily routine."""
-    db_entry = DBDailyRoutineSeen.objects(user=db_user_id).first()
+    db_entry = DBDailyRoutineSeen.objects(user=x.db_user_id).first()
     if db_entry is None:
         return f"The human hasn't seen the daily routine yet."
     return mongo_to_json(db_entry.to_mongo().to_dict())
 
 
 @set_attribute("return_direct", False)
-def save_daily_routine_seen(
-    memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
-):
+def save_daily_routine_seen(x: BaseAgent, utterance: str):
     """Saves a record of the human having seen the daily routine to the database."""
     entry = DailyRoutineSeen(date=datetime.now()).dict()
     log.info(f"save_daily_routine_seen {entry=}")
-    save_daily_routine_seen_to_db(db_user_id, entry)
+    save_daily_routine_seen_to_db(x.db_user_id, entry)
 
 
 GOALS = [
@@ -153,9 +150,7 @@ def get_context(utterance: str) -> str:
     assert False, "similarity search failed"
 
 
-def get_knowledge_answer(
-    memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
-) -> str:
+def get_knowledge_answer(x: BaseAgent, utterance: str):
     """Use this whenever the human asks any question about health or what to do.
     Use this more than the other tools."""
     context = get_context(utterance)
@@ -185,7 +180,7 @@ def get_knowledge_answer(
             HumanMessagePromptTemplate.from_template("{input}"),
         ]
     )
-    return get_completion(memory, utterance, prompt)
+    return get_completion(x.ro_memory, utterance, prompt)
 
 
 TOOLS = [get_knowledge_answer, get_daily_routine_seen, save_daily_routine_seen]

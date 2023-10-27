@@ -6,6 +6,7 @@ from langchain.pydantic_v1 import BaseModel, Field, validator
 from langchain.schema import BaseMemory
 from mongoengine import ReferenceField
 
+from .agent import BaseAgent
 from .goal import goal_refused
 from .helpful_scripts import (
     Goal,
@@ -65,12 +66,11 @@ DBHealthHistory = pydantic_to_mongoengine(
 )
 
 
-def get_health_history_from_memory(memory: BaseMemory) -> HealthHistory:
+def get_health_history_from_memory(x: BaseAgent) -> HealthHistory:
     return get_parsed_output(
         "summarise the answers the human gave for their health history",
-        memory,
+        x,
         HealthHistory,
-        k=(len(HealthHistory.__fields__) * 2) + 5,
     )
 
 
@@ -89,24 +89,19 @@ def get_json_health_history(entry: dict) -> str:
 
 
 @set_attribute("return_direct", False)
-def save_health_history(
-    memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
-):
-    """Saves the Health History to the database *only* after all the questions
-    have been answered."""
-    entry = get_health_history_from_memory(memory)
+def save_health_history(x: BaseAgent, utterance: str):
+    """Saves the Health History to the database."""
+    entry = get_health_history_from_memory(x)
     print(f"{entry=}")
     if entry is not None:
         log.info(f"save_health_history {entry=}")
-        save_health_history_to_db(db_user_id, entry)
+        save_health_history_to_db(x.db_user_id, entry)
 
 
 @set_attribute("return_direct", False)
-def get_last_health_history(
-    memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
-):
+def get_last_health_history(x: BaseAgent, utterance: str):
     """Returns the last Health History entry."""
-    entry = DBHealthHistory.objects(user=db_user_id).order_by("-id").first()
+    entry = DBHealthHistory.objects(user=x.db_user_id).order_by("-id").first()
     if entry is None:
         return "No Health History found"
     entry = entry.to_mongo().to_dict()

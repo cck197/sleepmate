@@ -1,14 +1,12 @@
 import logging
 from datetime import date, datetime, time, timedelta
 
-from langchain.memory import ReadOnlySharedMemory
 from langchain.pydantic_v1 import BaseModel, Field, validator
-from langchain.schema import BaseMemory
 from mongoengine import ReferenceField
 
+from .agent import BaseAgent
 from .goal import goal_refused
 from .helpful_scripts import (
-    Goal,
     get_confirmation_str,
     get_date_fields,
     mongo_to_json,
@@ -57,8 +55,8 @@ DBSeedPod = pydantic_to_mongoengine(
 )
 
 
-def get_seed_pod_from_memory(memory: BaseMemory) -> SeedPod:
-    return get_parsed_output("summarise the SEEDS", memory, SeedPod)
+def get_seed_pod_from_memory(x: BaseAgent) -> SeedPod:
+    return get_parsed_output("summarise the SEEDS", x.latest_messages, SeedPod)
 
 
 def save_seed_pod_to_db(user: str, entry: SeedPod) -> DBSeedPod:
@@ -71,15 +69,13 @@ def get_json_seed_pod(entry: dict) -> str:
 
 
 @set_attribute("return_direct", False)
-def save_seed_pod(
-    memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
-):
+def save_seed_pod(x: BaseAgent, utterance: str):
     """Use this to save a SEEDS to the database."""
-    entry = get_seed_pod_from_memory(memory)
+    entry = get_seed_pod_from_memory(x)
     log.info(f"save_seed_pod {entry=}")
     if entry is None:
         return
-    save_seed_pod_to_db(db_user_id, entry)
+    save_seed_pod_to_db(x.db_user_id, entry)
 
 
 def get_current_seed_pod(db_user_id: str) -> DBSeedPod:
@@ -88,11 +84,9 @@ def get_current_seed_pod(db_user_id: str) -> DBSeedPod:
 
 
 @set_attribute("return_direct", False)
-def get_seed_pod(
-    memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
-):
+def get_seed_pod(x: object, utterance: str):
     """Returns predefined SEEDS tasks from the database."""
-    entry = get_current_seed_pod(db_user_id)
+    entry = get_current_seed_pod(x.db_user_id)
     if entry is not None:
         return get_json_seed_pod(entry.to_mongo().to_dict())
 
@@ -141,8 +135,10 @@ DBSeedsDiaryEntry = pydantic_to_mongoengine(
 )
 
 
-def get_seeds_from_memory(memory: BaseMemory) -> SeedsDiaryEntry:
-    return get_parsed_output("summarise the SEEDS diary entry", memory, SeedsDiaryEntry)
+def get_seeds_from_memory(x: BaseAgent) -> SeedsDiaryEntry:
+    return get_parsed_output(
+        "summarise the SEEDS diary entry", x.latest_messages, SeedsDiaryEntry
+    )
 
 
 def save_seeds_diary_entry_to_db(
@@ -157,15 +153,13 @@ def get_json_seeds(entry: dict) -> str:
 
 
 @set_attribute("return_direct", False)
-def save_seeds_diary_entry(
-    memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
-):
+def save_seeds_diary_entry(x: BaseAgent, utterance: str):
     """Use this to save a SEEDS diary entry to the database."""
-    entry = get_seeds_from_memory(memory)
+    entry = get_seeds_from_memory(x)
     log.info(f"save_seeds_diary_entry {entry=}")
     if entry is None:
         return
-    save_seeds_diary_entry_to_db(get_current_seed_pod(db_user_id), entry)
+    save_seeds_diary_entry_to_db(get_current_seed_pod(x.db_user_id), entry)
 
 
 def get_current_seeds(db_user_id: str) -> DBSeedsDiaryEntry:
@@ -178,11 +172,9 @@ def get_current_seeds(db_user_id: str) -> DBSeedsDiaryEntry:
 
 
 @set_attribute("return_direct", False)
-def get_seeds_diary_entry(
-    memory: ReadOnlySharedMemory, goal: Goal, db_user_id: str, utterance: str
-):
+def get_seeds_diary_entry(x: BaseAgent, utterance: str):
     """Returns SEEDS diary entry from the database."""
-    db_entry = get_current_seeds(db_user_id)
+    db_entry = get_current_seeds(x.db_user_id)
     log.info(f"get_seeds_diary_entry {db_entry=}")
     if db_entry is not None:
         entry = db_entry.to_mongo().to_dict()
