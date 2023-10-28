@@ -54,7 +54,7 @@ class SleepDiaryEntry(SleepDiaryEntry_):
 
 def get_sleep_diary_entry_from_memory(x: BaseAgent) -> SleepDiaryEntry:
     return get_parsed_output(
-        "summarise the last sleep diary entry", x.latest_messages, SleepDiaryEntry
+        "summarise the last sleep diary entry", x.get_latest_messages, SleepDiaryEntry
     )
 
 

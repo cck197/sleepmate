@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime
-from typing import List, Tuple
+from typing import Callable, List, Tuple
 
 from langchain.chains import LLMChain
 from langchain.chat_models import ChatOpenAI
@@ -51,7 +51,10 @@ def get_memory_from_messages(
 
 
 def get_parsed_output(
-    query: str, x: object, cls: BaseModel, k: int = None
+    query: str,
+    get_messages_func: Callable[[int], List[BaseMessage]],
+    cls: BaseModel,
+    k: int = None,
 ) -> BaseModel:
     """Get the parsed output from chat_history"""
     # Set up a parser + inject instructions into the prompt template.
@@ -60,7 +63,7 @@ def get_parsed_output(
     # make sure the history is at least twice as long in order to extract them all
     if k is None:
         k = k = (len(cls.__fields__) * 2) + 5
-    memory = get_memory_from_messages(x.get_latest_messages(k=k), k=k + 1)
+    memory = get_memory_from_messages(get_messages_func(k=k), k=k + 1)
 
     prompt = PromptTemplate(
         template="Answer the user query.\n{format_instructions}\n{query}\n"

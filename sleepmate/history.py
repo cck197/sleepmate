@@ -69,7 +69,7 @@ DBHealthHistory = pydantic_to_mongoengine(
 def get_health_history_from_memory(x: BaseAgent) -> HealthHistory:
     return get_parsed_output(
         "summarise the answers the human gave for their health history",
-        x,
+        x.get_latest_messages,
         HealthHistory,
     )
 

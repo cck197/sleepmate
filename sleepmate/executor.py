@@ -90,8 +90,10 @@ class X(BaseAgent):
         self.add_user = add_user
         self.db_user_id = get_user_from_username(username).id if username else None
         self.goal_refused = False
-        self.stop_handler = GoalRefusedHandler(self.set_goal_refused)
-        self.message_handler = MessageHandler(self.set_chat_model_start)
+        self.callbacks = [
+            GoalRefusedHandler(self.set_goal_refused),
+            MessageHandler(self.set_chat_model_start),
+        ]
         self.fixed_goal = fixed_goal
         self.goal = None
         if goal:
@@ -148,14 +150,18 @@ class X(BaseAgent):
         return goal
 
     def set_chat_model_start(self, messages: List[List[BaseMessage]]):
+        """Save the last message in the chat history as the chat model
+        starts."""
+        # annoying hack -- when the agent runs a tool to extract an object from
+        # the chat history the last message is missing unless the agent
+        # summarises the data it just collected, which it doesn't always do
+        # if the last message is missing, then the object extraction fails, so
+        # save the message here to add to the chat history on extraction.
         # don't include the system message
         self.last_message = messages[0][-1]
-        log.info(f"set_chat_model_start: {self.last_message=}")
-        # import pdb
+        log.debug(f"set_chat_model_start: {self.last_message=}")
 
-        # pdb.set_trace()
-
-    def get_latest_messages(self, k: int):
+    def get_latest_messages(self, k: int) -> List[BaseMessage]:
         return self.memory.chat_memory.messages[-k:] + [self.last_message]
 
     def run(self, utterance: str = "") -> str:
@@ -165,7 +171,7 @@ class X(BaseAgent):
             utterance = goal.key
         output = self.agent_executor.run(
             input=utterance,
-            callbacks=[self.stop_handler, self.message_handler],
+            callbacks=self.callbacks,
         )
         # print(output)
         if self.audio:
@@ -180,7 +186,7 @@ class X(BaseAgent):
             utterance = goal.key
         return await self.agent_executor.arun(
             input=utterance,
-            callbacks=[self.stop_handler],
+            callbacks=self.callbacks,
         )
 
     def load_memory(

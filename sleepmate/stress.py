@@ -2,14 +2,12 @@ import logging
 from datetime import datetime
 from typing import List
 
-from langchain.memory import ReadOnlySharedMemory
 from langchain.pydantic_v1 import BaseModel, Field, validator
-from langchain.schema import BaseMemory
 from mongoengine import ReferenceField
 
 from .agent import BaseAgent
 from .goal import goal_refused
-from .helpful_scripts import Goal, get_date_fields, mongo_to_json, set_attribute
+from .helpful_scripts import get_date_fields, mongo_to_json, set_attribute
 from .structured import fix_schema, get_parsed_output, pydantic_to_mongoengine
 from .user import DBUser
 
@@ -45,7 +43,7 @@ DBStressAudit = pydantic_to_mongoengine(
 
 def get_stress_audit_from_memory(x: BaseAgent) -> StressAudit:
     return get_parsed_output(
-        "summarise the stress audit", x.latest_messages, StressAudit
+        "summarise the stress audit", x.get_latest_messages, StressAudit
     )
 
 

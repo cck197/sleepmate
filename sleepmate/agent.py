@@ -11,5 +11,5 @@ class BaseAgent(object):
     goal: Goal = None
     ro_memory: ReadOnlySharedMemory = None
 
-    def get_latest_messages(self) -> List[List[BaseMessage]]:
+    def get_latest_messages(self) -> List[BaseMessage]:
         assert False, "Must implement get_latest_messages"

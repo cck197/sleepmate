@@ -1,11 +1,8 @@
 import logging
 
-from langchain.memory import ReadOnlySharedMemory
-from langchain.schema import BaseMemory
-
 from .agent import BaseAgent
 from .goal import goal_refused
-from .helpful_scripts import Goal, get_confirmation_str, set_attribute
+from .helpful_scripts import get_confirmation_str, set_attribute
 from .structured import get_parsed_output
 from .user import User, get_user_from_id
 
@@ -13,7 +10,9 @@ log = logging.getLogger(__name__)
 
 
 def get_user_from_memory(x: BaseAgent) -> User:
-    return get_parsed_output("summarise the human's details", x.latest_messages, User)
+    return get_parsed_output(
+        "summarise the human's details", x.get_latest_messages, User
+    )
 
 
 def edit_user_(db_user_id: str, key: str, utterance: str):

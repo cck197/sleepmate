@@ -52,7 +52,9 @@ DBISIEntry = pydantic_to_mongoengine(
 
 def get_isi_entry_from_memory(x: BaseAgent) -> ISIEntry:
     return get_parsed_output(
-        "summarise the last Insomnia Severity Index entry", x.latest_messages, ISIEntry
+        "summarise the last Insomnia Severity Index entry",
+        x.get_latest_messages,
+        ISIEntry,
     )
 
 

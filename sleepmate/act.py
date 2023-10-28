@@ -3,15 +3,12 @@ from datetime import datetime, timedelta
 from functools import partial
 from typing import Tuple
 
-from langchain.memory import ReadOnlySharedMemory
 from langchain.pydantic_v1 import BaseModel, Field, validator
-from langchain.schema import BaseMemory
 from mongoengine import ReferenceField
 
 from .agent import BaseAgent
 from .goal import goal_refused
 from .helpful_scripts import (
-    Goal,
     get_confirmation_str,
     get_date_fields,
     json_dumps,
@@ -57,7 +54,7 @@ DBExerciseEntry = pydantic_to_mongoengine(
 
 def get_exercise_entry_from_memory(x: BaseAgent) -> ExerciseEntry:
     return get_parsed_output(
-        "summarise the last exercise", x.latest_messages, ExerciseEntry
+        "summarise the last exercise", x.get_latest_messages, ExerciseEntry
     )
 
 
@@ -156,7 +153,7 @@ DBVLQEntry = pydantic_to_mongoengine(
 
 
 def get_vlq_entry_from_memory(x: BaseAgent) -> VLQEntry:
-    return get_parsed_output("summarise the VLQ", x.latest_messages, VLQEntry)
+    return get_parsed_output("summarise the VLQ", x.get_latest_messages, VLQEntry)
 
 
 def save_vlq_entry_to_db(user: str, entry: VLQEntry) -> DBVLQEntry:

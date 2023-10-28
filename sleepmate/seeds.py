@@ -56,7 +56,7 @@ DBSeedPod = pydantic_to_mongoengine(
 
 
 def get_seed_pod_from_memory(x: BaseAgent) -> SeedPod:
-    return get_parsed_output("summarise the SEEDS", x.latest_messages, SeedPod)
+    return get_parsed_output("summarise the SEEDS", x.get_latest_messages, SeedPod)
 
 
 def save_seed_pod_to_db(user: str, entry: SeedPod) -> DBSeedPod:
@@ -137,7 +137,7 @@ DBSeedsDiaryEntry = pydantic_to_mongoengine(
 
 def get_seeds_from_memory(x: BaseAgent) -> SeedsDiaryEntry:
     return get_parsed_output(
-        "summarise the SEEDS diary entry", x.latest_messages, SeedsDiaryEntry
+        "summarise the SEEDS diary entry", x.get_latest_messages, SeedsDiaryEntry
     )
 
 
