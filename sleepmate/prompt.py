@@ -10,7 +10,7 @@ from langchain.prompts import (
     MessagesPlaceholder,
     SystemMessagePromptTemplate,
 )
-from langchain.schema import AgentAction, BaseMessage
+from langchain.schema import AgentAction, BaseMessage, HumanMessage
 from langchain.tools import BaseTool, Tool
 
 from .config import SLEEPMATE_STOP_SEQUENCE, SLEEPMATE_SYSTEM_DESCRIPTION
@@ -123,3 +123,7 @@ def get_template(goal: Goal, db_user_id: str, prompt: str) -> ChatPromptTemplate
             HumanMessagePromptTemplate.from_template("{input}"),
         ]
     )
+
+
+def get_last_human_message(messages: List[BaseMessage]):
+    return [m for m in messages if type(m) is HumanMessage][-1]

@@ -293,7 +293,7 @@ GOALS = [
 
         Steps: 
         - Ask if now is a good time to record a SEEDS diary entry
-        - Summarise the SEEDS they gave earlier
+        - Retrieve the SEEDS from the database and summarise them
         - Date of entry (ask to confirm default of yesterday's date)
         - For each SEED in each pillar, ask what they got done today
         - Summarise all the tasks in a bullet list and ask if correct

@@ -39,6 +39,13 @@ SLEEPMATE_CONFIRMATION_WORDS = [
     "ready",
 ]
 
+# Simon pointed out that  in the future, clients might have the option to choose
+# the tone of responses from their coaches to better align with their
+# motivational requirements. Some individuals may prefer a kind, supportive, and
+# non-judgmental approach, while others might benefit from a straightforward,
+# stern demeanor akin to a drill instructor's style. We might also switch styles
+# based on compliance.
+
 SLEEPMATE_SYSTEM_DESCRIPTION = """You are a somewhat lighthearted AI clinician
 skilled in Motivational Interviewing and Acceptance and Commitment Therapy. You
 make very sparing use of British humour and the occasional self-deprecating

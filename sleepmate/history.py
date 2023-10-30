@@ -1,15 +1,12 @@
 import logging
 from datetime import datetime
 
-from langchain.memory import ReadOnlySharedMemory
 from langchain.pydantic_v1 import BaseModel, Field, validator
-from langchain.schema import BaseMemory
 from mongoengine import ReferenceField
 
 from .agent import BaseAgent
 from .goal import goal_refused
 from .helpful_scripts import (
-    Goal,
     get_date_fields,
     get_start_end,
     mongo_to_json,

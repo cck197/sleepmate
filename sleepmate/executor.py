@@ -34,7 +34,13 @@ from .helpful_scripts import (
     import_attrs,
     setup_logging,
 )
-from .prompt import GoalRefusedHandler, MessageHandler, get_system_prompt, get_tools
+from .prompt import (
+    GoalRefusedHandler,
+    MessageHandler,
+    get_last_human_message,
+    get_system_prompt,
+    get_tools,
+)
 from .user import get_user_from_id, get_user_from_username
 
 log = logging.getLogger(__name__)
@@ -45,6 +51,7 @@ class X(BaseAgent):
         "meet",
         "health_history",
         "insomnia_severity_index",
+        "stop_bang",
         "diary_entry",
         "daily_routine",
         "stimulus_control",
@@ -82,7 +89,9 @@ class X(BaseAgent):
         self.memory = None
         self.tools = import_attrs(["TOOLS"])["TOOLS"]
         self.log.debug(f"X() len(self.tools)={len(self.tools)}")
-        self.goals = flatten_dict(import_attrs(["GOALS", "GOAL_HANDLERS"]))
+        self.goals = flatten_dict(
+            import_attrs(["GOALS", "GOAL_HANDLERS", "GOAL_OPTIONS"])
+        )
         assert set(self.goal_list).issubset(set(self.goals["GOAL_HANDLERS"].keys()))
 
         self.audio = audio
@@ -120,9 +129,6 @@ class X(BaseAgent):
         return Goal(key=goal, description=self.goals["GOALS"][goal]) if goal else None
 
     def set_agent(self):
-        # the model is fine tuned for selecting a function
-        # sampling temperature is set to 0 (no sampling)
-        # goal = self.goals["GOALS"][self.goal] if self.goal else None
         agent = OpenAIFunctionsAgent(
             llm=ChatOpenAI(temperature=0, model=SLEEPMATE_AGENT_MODEL_NAME),
             tools=get_tools(self),
@@ -157,8 +163,7 @@ class X(BaseAgent):
         # summarises the data it just collected, which it doesn't always do
         # if the last message is missing, then the object extraction fails, so
         # save the message here to add to the chat history on extraction.
-        # don't include the system message
-        self.last_message = messages[0][-1]
+        self.last_message = get_last_human_message(messages[0])
         log.debug(f"set_chat_model_start: {self.last_message=}")
 
     def get_latest_messages(self, k: int) -> List[BaseMessage]:
@@ -191,7 +196,7 @@ class X(BaseAgent):
 
     def load_memory(
         self,
-        k: int = 10,
+        k: int = 5,
         memory_key: str = "chat_history",
     ) -> None:
         self.memory = ConversationBufferWindowMemory(
@@ -213,14 +218,17 @@ class X(BaseAgent):
     def clear_chat_history(self, N=10):
         """Delete the last N chat history entries."""
         collection = self.memory.chat_memory.collection
-        cursor = collection.find().sort([("_id", -1)]).limit(N)
+        cursor = (
+            collection.find({"SessionId": self.db_user_id}).sort([("_id", -1)]).limit(N)
+        )
         ids_to_delete = [doc["_id"] for doc in cursor]
+        log.info(f"clear_chat_history: deleting {ids_to_delete=}")
         collection.delete_many({"_id": {"$in": ids_to_delete}})
 
     def clear_db(self):
         clear_db_for_user(self.db_user_id)
 
-    def get_agent_prompt(self, rigid=False) -> ChatPromptTemplate:
+    def get_agent_prompt(self, rigid=None) -> ChatPromptTemplate:
         system = get_system_prompt(self.goal, get_user_from_id(self.db_user_id))
         messages = [
             SystemMessagePromptTemplate.from_template(system),
@@ -230,9 +238,13 @@ class X(BaseAgent):
         ]
         # nuclear option - set the goal as a system message, thus overriding the
         # agent's prediction of what to do next
+        if rigid is None and self.goal:
+            rigid = (
+                self.goals["GOAL_OPTIONS"].get(self.goal.key, {}).get("rigid", False)
+            )
         if rigid:
             messages.insert(
-                -1, SystemMessagePromptTemplate.from_template(str(self.goal))
+                -1, SystemMessagePromptTemplate.from_template(self.goal.description)
             )
 
         return ChatPromptTemplate.from_messages(messages)
