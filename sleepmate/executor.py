@@ -50,6 +50,7 @@ class X(BaseAgent):
     DEFAULT_GOAL_LIST = [
         "meet",
         "health_history",
+        "bmi",
         "insomnia_severity_index",
         "stop_bang",
         "diary_entry",

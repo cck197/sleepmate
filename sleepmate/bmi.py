@@ -10,7 +10,6 @@ from .helpful_scripts import (
     get_date_fields,
     get_start_end,
     mongo_to_json,
-    parse_date,
     set_attribute,
 )
 from .structured import fix_schema, get_parsed_output, pydantic_to_mongoengine
@@ -35,7 +34,7 @@ class BMI(BMI_):
 
     @validator(*date_fields, pre=True)
     def convert_date_to_datetime(cls, value):
-        return parse_date(value)
+        return datetime.now()
 
 
 DBBMI = pydantic_to_mongoengine(

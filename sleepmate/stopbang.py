@@ -24,10 +24,8 @@ class StopBang_(BaseModel):
     tired: bool = Field(description="tired during the day")
     observed: bool = Field(description="observed to stop breathing")
     pressure: bool = Field(description="high blood pressure")
-    neck: bool = Field(description="neck circumference greater than 40 centimetres")
-    bmi: bool = Field(description="body mass index greater than 35")
-    age: bool = Field(description="age greater than 50")
-    sex: bool = Field(description="male")
+    neck: float = Field(description="neck circumference")
+    score: int = Field(description="STOP-Bang score")
 
 
 date_fields = get_date_fields(StopBang_)
@@ -107,47 +105,34 @@ GOAL_HANDLERS = [
 GOALS = [
     {
         "stop_bang": """
-        Your goal is to survey the human for their STOP-Bang Questionnaire. Ask
-        the following questions:
-        
-        - Date of entry (default to today's date)
-        - Do you snore loudly (louder than talking or loud enough to be heard
-        through closed doors)?
-        - Do you often feel tired, fatigued, or sleepy during daytime?
-        - Has anyone observed you stop breathing during your sleep?
-        - Do you have or are being treated for high blood pressure?
-        - What is your neck circumference (convert to cm if necessary)?
-        
+        Your goal is to complete the STOP-Bang Questionnaire.
+
         Steps:
-        - Get the sex from the Health History database entry
-        - Get the date of birth from the Health History database entry and
-        calculate the age
-        - Get the height and weight from the BMI database entry then calculate
-        the BMI
-        - Calculate the STOP-Bang score (see below)
-
-        Summarise the STOP-Bang score:
-        - Snores loudly: 1 point
-        - Tired during the day: 1 point
-        - Observed not breathing: 1 point
-        - Blood pressure: 1 point
-        - BMI greater than 35 kg/m2: 1 point
-        - Age greater than 50: 1 point
-        - Neck greater than (17”/43cm in male, 16”/41cm in female): 1 point
-        - Sex male: 1 point
-
-        Give the STOP-Bang score in points then explain the risk:
+        - Get the Health History database entry
+        - Get the date of birth and calculate calculate the age
+        - Get the BMI database entry
+        - Get the height and weight then calculate the BMI
+        - Summarise the sex, age, height, weight and BMI
+        - Ask the following questions:
+            - Do you snore loudly (louder than talking or loud enough to be heard
+            through closed doors)?
+            - Do you often feel tired, fatigued, or sleepy during daytime?
+            - Has anyone observed you stop breathing during your sleep?
+            - Do you have or are being treated for high blood pressure?
+            - What is your neck circumference (convert to cm if necessary)?
+        - Calculate the STOP-Bang score
+        - Save the StopBang entry to the database
+        - Summarise the STOPBang entry 
+        - Explain the risk (see below)
         
         Low risk of OSA (Obstructive Sleep Apnoea): 0-2 points
         Intermediate risk of OSA: 3-4 points
         High risk of OSA: 5-8 points
-            or Yes to 2 or more of 4 STOP questions + male gender
+            or Yes to 2 or more of 4 STOP questions + male
             or Yes to 2 or more of 4 STOP questions + BMI > 35 kg/m2
             or Yes to 2 or more of 4 STOP questions + neck circumference
             (17”/43cm in male, 16”/41cm in female)
-
-        Finally, save these answers to a StopBang entry in the database
-        """
+        """,
     },
 ]
 
