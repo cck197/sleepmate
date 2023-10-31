@@ -15,6 +15,10 @@ from IPython.display import Markdown, display
 from .config import SLEEPMATE_CONFIRMATION_WORDS
 
 
+def timedelta_in_years(td):
+    return td.days / 365.25
+
+
 def setup_logging(log_level=logging.INFO):
     fmt = "{asctime} {levelname:<8} {name} {message}"
     datefmt = "%Y-%m-%d %H:%M:%S"

@@ -75,6 +75,15 @@ def save_bmi(x: BaseAgent, utterance: str):
 
 
 @set_attribute("return_direct", False)
+def calculate_bmi(x: BaseAgent, utterance: str):
+    """Use this to calculate the BMI."""
+    entry = DBBMI.objects(user=x.db_user_id).order_by("-id").first()
+    if entry is None:
+        return "No BMI found"
+    return entry.weight / (entry.height * entry.height)
+
+
+@set_attribute("return_direct", False)
 def get_last_bmi(x: BaseAgent, utterance: str):
     """Returns the last BMI entry."""
     entry = DBBMI.objects(user=x.db_user_id).order_by("-id").first()
@@ -115,4 +124,4 @@ GOALS = [
     },
 ]
 
-TOOLS = [get_last_bmi, save_bmi]
+TOOLS = [get_last_bmi, save_bmi, calculate_bmi]

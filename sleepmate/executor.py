@@ -147,7 +147,9 @@ class X(BaseAgent):
     def __call__(self, *args, **kwargs) -> str:
         return self.run(*args, **kwargs)
 
-    def get_goal(self):
+    def proceed(self):
+        """Returns the next goal. If the goal has changed, then the agent is
+        reset."""
         self.goal_refused = False
         goal = self.get_next_goal()
         if goal != self.goal:
@@ -171,8 +173,7 @@ class X(BaseAgent):
         return self.memory.chat_memory.messages[-k:] + [self.last_message]
 
     def run(self, utterance: str = "") -> str:
-        self.latest_messages = []
-        goal = self.get_goal()
+        goal = self.proceed()
         if not utterance:
             utterance = goal.key
         output = self.agent_executor.run(
@@ -184,16 +185,19 @@ class X(BaseAgent):
             play(output)
         if self.display:
             display_markdown(output)
+        self.clear_old_goal_chat_history()
         return output
 
-    async def arun(self, utterance: str = "") -> bool:
-        goal = self.get_goal()
+    async def arun(self, utterance: str = "") -> str:
+        goal = self.proceed()
         if not utterance:
             utterance = goal.key
-        return await self.agent_executor.arun(
+        output = await self.agent_executor.arun(
             input=utterance,
             callbacks=self.callbacks,
         )
+        self.clear_old_goal_chat_history()
+        return output
 
     def load_memory(
         self,
@@ -216,14 +220,22 @@ class X(BaseAgent):
         )
         self.ro_memory = ReadOnlySharedMemory(memory=self.memory)
 
-    def clear_chat_history(self, N=10):
+    def clear_old_goal_chat_history(self):
+        goal = self.get_next_goal()
+        if self.goal is not None and self.goal != goal:
+            log.info(
+                f"clear_chat_history: {self.goal} -> {goal} ({self.db_user_id} cleared)"
+            )
+            self.memory.clear()
+
+    def clear_chat_history_tail(self, N=10):
         """Delete the last N chat history entries."""
         collection = self.memory.chat_memory.collection
         cursor = (
             collection.find({"SessionId": self.db_user_id}).sort([("_id", -1)]).limit(N)
         )
         ids_to_delete = [doc["_id"] for doc in cursor]
-        log.info(f"clear_chat_history: deleting {ids_to_delete=}")
+        log.info(f"clear_chat_history_tail: deleting {ids_to_delete=}")
         collection.delete_many({"_id": {"$in": ids_to_delete}})
 
     def clear_db(self):

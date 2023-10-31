@@ -12,6 +12,7 @@ from .helpful_scripts import (
     mongo_to_json,
     parse_date,
     set_attribute,
+    timedelta_in_years,
 )
 from .structured import fix_schema, get_parsed_output, pydantic_to_mongoengine
 from .user import DBUser
@@ -83,6 +84,15 @@ def save_health_history_to_db(db_user_id: str, entry: HealthHistory) -> DBHealth
 def get_json_health_history(entry: dict) -> str:
     """Returns the Health History entry in JSON format."""
     return mongo_to_json(entry)
+
+
+@set_attribute("return_direct", False)
+def calculate_age_in_years(x: BaseAgent, utterance: str):
+    """Call this when you need to calculate the age from the date of birth."""
+    entry = DBHealthHistory.objects(user=x.db_user_id).order_by("-id").first()
+    if entry is None:
+        return "No Health History found"
+    return timedelta_in_years(datetime.now() - entry.date_of_birth)
 
 
 @set_attribute("return_direct", False)
@@ -158,4 +168,4 @@ GOALS = [
     }
 ]
 
-TOOLS = [get_last_health_history, save_health_history]
+TOOLS = [get_last_health_history, save_health_history, calculate_age_in_years]

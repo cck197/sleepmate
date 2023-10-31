@@ -106,24 +106,6 @@ GOALS = [
     {
         "stop_bang": """
         Your goal is to complete the STOP-Bang Questionnaire.
-
-        Steps:
-        - Get the Health History database entry
-        - Get the date of birth and calculate calculate the age
-        - Get the BMI database entry
-        - Get the height and weight then calculate the BMI
-        - Summarise the sex, age, height, weight and BMI
-        - Ask the following questions:
-            - Do you snore loudly (louder than talking or loud enough to be heard
-            through closed doors)?
-            - Do you often feel tired, fatigued, or sleepy during daytime?
-            - Has anyone observed you stop breathing during your sleep?
-            - Do you have or are being treated for high blood pressure?
-            - What is your neck circumference (convert to cm if necessary)?
-        - Calculate the STOP-Bang score
-        - Save the StopBang entry to the database
-        - Summarise the STOPBang entry 
-        - Explain the risk (see below)
         
         Low risk of OSA (Obstructive Sleep Apnoea): 0-2 points
         Intermediate risk of OSA: 3-4 points
@@ -132,6 +114,31 @@ GOALS = [
             or Yes to 2 or more of 4 STOP questions + BMI > 35 kg/m2
             or Yes to 2 or more of 4 STOP questions + neck circumference
             (17”/43cm in male, 16”/41cm in female)
+
+        Steps:
+        - Ask if now is a good time to complete the STOP-Bang Questionnaire.
+        - Get the Health History database entry
+        - Calculate the age in years
+        - Calculate the BMI
+        - Summarise the sex, age, height, weight, medical conditions and BMI
+        - Ask the following questions:
+            - (S) Do you snore loudly (louder than talking or loud enough to be heard
+            through closed doors)?
+            - (T) Do you often feel tired, fatigued, or sleepy during daytime?
+            - (O) Has anyone observed you stop breathing during your sleep?
+        - Summarise from the Health History and BMI:
+            - (P) High blood pressure if hypertension or high blood pressure in
+            medical_conditions
+            - (B) BMI > 35 kg/m2
+            - (A) Calculated age > 50 years (think step by step)
+        - Ask:
+            - (N) What is your neck circumference (convert to cm if necessary)?
+        - Summarise from the Health History:
+            - (G) Gender male
+        - Calculate the STOP-Bang score (think step by step)
+        - Summarise the STOP-Bang entry in order
+        - Explain the risk
+        - Important! Save the StopBang entry to the database
         """,
     },
 ]
