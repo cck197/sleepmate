@@ -10,18 +10,20 @@ packages = [{include = "sleepmate"}]
 python = "^3.11"
 openai = "^0.28.1"
 langchain = "^0.0.324"
-jupyterlab = "^4.0.7"
-chromadb = "^0.4.13"
 tiktoken = "^0.5.1"
 pypdfium2 = "^4.20.0"
 elevenlabs = "^0.2.26"
 mongoengine = "^0.27.0"
 python-dateutil = "^2.8.2"
 discord-py = "^2.3.2"
+pinecone-client = "^2.2.4"
+coloredlogs = "^15.0.1"
 
 [tool.poetry.group.dev.dependencies]
 ipython = "^8.15.0"
 google-api-python-client = "^2.102.0"
+ipywidgets = "^8.1.1"
+jupyterlab = "^4.0.7"
 
 [build-system]
 requires = ["poetry-core"]

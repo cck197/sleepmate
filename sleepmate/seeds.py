@@ -173,13 +173,41 @@ def get_current_seeds(db_user_id: str) -> DBSeedsDiaryEntry:
 
 @set_attribute("return_direct", False)
 def get_seeds_diary_entry(x: BaseAgent, utterance: str):
-    """Returns SEEDS diary entry from the database."""
+    """Returns the last SEEDS diary entry from the database."""
     db_entry = get_current_seeds(x.db_user_id)
     log.info(f"get_seeds_diary_entry {db_entry=}")
     if db_entry is not None:
         entry = db_entry.to_mongo().to_dict()
         entry["pod"] = get_json_seed_pod(db_entry.pod.to_mongo().to_dict())
         return get_json_seeds(entry)
+
+
+@set_attribute("return_direct", False)
+def delete_seeds_diary_entry(x: BaseAgent, utterance: str):
+    """Deletes the last SEEDS diary entry from the database."""
+    db_entry = get_current_seeds(x.db_user_id)
+    log.info(f"delete_seeds_diary_entry {db_entry=}")
+    if db_entry is not None:
+        db_entry.delete()
+        return True
+    return False
+
+
+@set_attribute("return_direct", False)
+def get_seeds_diary_entry_score(x: BaseAgent, utterance: str):
+    """Returns the total number of tasks completed in the SEEDS diary entry."""
+    db_entry = get_current_seed_pod(x.db_user_id)
+    if db_entry is None:
+        return
+    entry = db_entry.to_mongo().to_dict()
+    # get the keys for all the predefined SEEDS tasks
+    keys = [k for (k, v) in entry.items() if type(v) is str and v]
+    db_entry = get_current_seeds(x.db_user_id)
+    if db_entry is None:
+        return
+    entry = db_entry.to_mongo().to_dict()
+    # return the total number of tasks completed
+    return sum([entry[k] for k in keys])
 
 
 def seeds_entry(db_user_id: str) -> bool:
@@ -293,14 +321,23 @@ GOALS = [
 
         Steps: 
         - Ask if now is a good time to record a SEEDS diary entry
-        - Retrieve the SEEDS from the database and summarise them
+        - Get their predefined SEEDS from the database and summarise all the
+        predefined tasks in a bullet list
         - Date of entry (ask to confirm default of yesterday's date)
-        - For each SEED in each pillar, ask what they got done today
+        - Ask what they got done today
         - Summarise all the tasks in a bullet list and ask if correct
-        - Give them a score (/15) for how many they managed to do that day
         - Save the SEEDS diary entry to the database
+        - Get N, the total number of tasks completed in the SEEDS diary entry
+        - Give them a score N out of 15
         """,
     },
 ]
 
-TOOLS = [get_seed_pod, save_seed_pod, get_seeds_diary_entry, save_seeds_diary_entry]
+TOOLS = [
+    get_seed_pod,
+    save_seed_pod,
+    get_seeds_diary_entry,
+    save_seeds_diary_entry,
+    get_seeds_diary_entry_score,
+    delete_seeds_diary_entry,
+]

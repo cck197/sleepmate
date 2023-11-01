@@ -1,34 +1,41 @@
 import logging
+import os
 from datetime import datetime
 from pathlib import Path
 
+import pinecone
 import tiktoken
 from langchain.document_loaders import PyPDFium2Loader as PDFLoader
 from langchain.document_loaders import TextLoader
 from langchain.embeddings.openai import OpenAIEmbeddings
-from langchain.memory import ReadOnlySharedMemory
 from langchain.prompts import (
     ChatPromptTemplate,
     HumanMessagePromptTemplate,
     SystemMessagePromptTemplate,
 )
 from langchain.pydantic_v1 import BaseModel, Field
-from langchain.vectorstores import Chroma
+from langchain.vectorstores import Pinecone
 from mongoengine import ReferenceField
 
 from .agent import BaseAgent
 from .config import (
+    PINECONE_INDEX_NAME,
     SLEEPMATE_DATADIR,
     SLEEPMATE_DEFAULT_MODEL_NAME,
     SLEEPMATE_MAX_TOKENS,
 )
 from .goal import goal_refused
-from .helpful_scripts import Goal, get_confirmation_str, mongo_to_json, set_attribute
+from .helpful_scripts import get_confirmation_str, mongo_to_json, set_attribute
 from .mi import get_completion
 from .structured import pydantic_to_mongoengine
 from .user import DBUser
 
 log = logging.getLogger(__name__)
+
+pinecone.init(
+    api_key=os.getenv("PINECONE_API_KEY"),  # find at app.pinecone.io
+    environment=os.getenv("PINECONE_ENVIRONMENT"),  # next to api key in console
+)
 
 
 class DailyRoutineSeen(BaseModel):
@@ -113,13 +120,16 @@ def count_tokens(text: str) -> int:
     return len(encoding.encode(text))
 
 
-def load_input_files(path="data", overwrite=False):
+def load_knowledge(path="data", overwrite=False, metric="cosine", dimension=1536):
     """load all the PDF/text files in path"""
-    dir = Path(path)
-    db_path = dir / "chroma_db"
     embeddings = OpenAIEmbeddings()
-    if db_path.exists() and not overwrite:
-        return Chroma(persist_directory=str(db_path), embedding_function=embeddings)
+    if PINECONE_INDEX_NAME not in pinecone.list_indexes() or overwrite:
+        pinecone.create_index(
+            name=PINECONE_INDEX_NAME, metric=metric, dimension=dimension
+        )
+    else:
+        return Pinecone.from_existing_index(PINECONE_INDEX_NAME, embeddings)
+    dir = Path(path)
     download_files(path)
     pages = []
     for file in dir.iterdir():
@@ -132,11 +142,10 @@ def load_input_files(path="data", overwrite=False):
         # results that are too long for the model context window
         pages.extend(loader_cls(str(file)).load_and_split())
     assert pages, "no pages loaded"
-    db = Chroma.from_documents(pages, embeddings, persist_directory=str(db_path))
-    return db
+    return Pinecone.from_documents(pages, embeddings, index_name=PINECONE_INDEX_NAME)
 
 
-db = load_input_files(SLEEPMATE_DATADIR)
+db = load_knowledge(SLEEPMATE_DATADIR)
 
 
 def get_context(utterance: str) -> str:

@@ -1,4 +1,5 @@
 import logging
+import warnings
 from typing import List
 
 from langchain.agents import AgentExecutor, OpenAIFunctionsAgent
@@ -15,6 +16,11 @@ from langchain.prompts import (
     SystemMessagePromptTemplate,
 )
 from langchain.schema import AgentAction, BaseMessage
+from tqdm import TqdmExperimentalWarning
+
+with warnings.catch_warnings():
+    warnings.filterwarnings("ignore", category=TqdmExperimentalWarning)
+    from tqdm.autonotebook import tqdm
 
 from .agent import BaseAgent
 from .audio import play
