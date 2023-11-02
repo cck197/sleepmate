@@ -37,9 +37,14 @@ def get_db_user(author):
     return get_user_from_username(username=str(author), name=author.name)
 
 
+async def cancel_job_by_id(job_id: str) -> None:
+    job = await queue.job(job_id)
+    if job:
+        await queue.abort(job)
+
+
 @client.event
 async def on_message(message):
-    log.info(f"on_message {message.channel.id=} {message.author=} {message.content=}")
     if message.channel.name in SLEEPMATE_DISCORD_CHANNEL_EXCLUDE:
         log.info(f"ignoring message in {message.channel.name}")
         return
@@ -54,17 +59,21 @@ async def on_message(message):
         db_user = get_db_user(message.author)
         x = X(username=db_user.username, hello=None, log_=log)
         await message.channel.send(await x.arun(message.content))
-        db_nudge = get_or_create_nudge(x)
-        log.info(f"on_message {db_user.username=} {db_nudge.to_mongo().to_dict()=}")
-        if not db_nudge.nudged:
+        db_nudge = get_or_create_nudge(x, seen=True)
+        log.debug(f"on_message {db_user.username=} {db_nudge.to_mongo().to_dict()=}")
+        # if db_nudge.job_id:
+        #     log.info(f"canceling nudge for {db_user.username}")
+        #     await cancel_job_by_id(db_nudge.job_id)
+        #     set_nudge(db_nudge, job_id=None)
+        if not db_nudge.job_id:
             log.info(f"scheduling nudge for {db_user.username}")
-            await queue.enqueue(
+            job = await queue.enqueue(
                 "send_nudge",
                 channel_id=message.channel.id,
                 db_user_id=str(db_user.id),
                 scheduled=time.time() + SLEEPMATE_NUDGE_TIME,
             )
-            set_nudge(db_nudge, nudged=True)
+            set_nudge(db_nudge, job_id=job.id)
 
 
 if __name__ == "__main__":

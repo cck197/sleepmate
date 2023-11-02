@@ -228,7 +228,8 @@ class X(BaseAgent):
 
     def clear_old_goal_chat_history(self):
         goal = self.get_next_goal()
-        if self.fixed_goal and self.goal is not None and self.goal != goal:
+        # clear the chat history if the goal has changed
+        if self.goal is not None and self.goal != goal:
             log.info(
                 f"clear_chat_history: {self.goal} -> {goal} ({self.db_user_id} cleared)"
             )

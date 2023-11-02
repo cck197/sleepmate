@@ -5,7 +5,7 @@ from mongoengine import ReferenceField
 
 from .agent import BaseAgent
 from .config import SLEEPMATE_NUDGE_TIME
-from .mi import get_greeting
+from .mi import get_greeting_no_memory
 from .structured import pydantic_to_mongoengine
 from .user import DBUser, get_user_from_id
 
@@ -17,7 +17,7 @@ from .user import DBUser, get_user_from_id
 class Nudge(BaseModel):
     text: str = Field(description="nudge text", default="")
     last_seen: datetime = Field(description="last time user was seen")
-    nudged: bool = Field(description="whether the user has been nudged", default=False)
+    job_id: str = Field(description="job id of the nudge", default="")
 
 
 DBNudge = pydantic_to_mongoengine(
@@ -37,15 +37,15 @@ def get_or_create_nudge(x: BaseAgent, seen: bool = False) -> bool:
         db_user = get_user_from_id(x.db_user_id)
         db_nudge = DBNudge.objects(user=db_user).first()
         last_seen = datetime.now()
-        if db_nudge is not None:
+        if db_nudge is None:
+            db_nudge = DBNudge(user=db_user, last_seen=last_seen)
+        if seen:
             db_nudge.last_seen = last_seen
-            return db_nudge
-        db_nudge = DBNudge(user=db_user, last_seen=last_seen, nudged=False)
         return db_nudge
 
     db_nudge = inner()
     if not db_nudge.text:
-        db_nudge.text = get_greeting(x, "hey")
+        db_nudge.text = get_greeting_no_memory(x, "hey")
     db_nudge.save()
     return db_nudge
 
@@ -55,8 +55,9 @@ def should_send_nudge(db_nudge: DBNudge, seconds: int = SLEEPMATE_NUDGE_TIME) ->
     return db_nudge.last_seen + timedelta(seconds=seconds) < datetime.now()
 
 
-def set_nudge(db_nudge: DBNudge, nudged=False) -> None:
+def set_nudge(db_nudge: DBNudge, job_id) -> None:
     """Reset the nudge."""
-    db_nudge.nudged = nudged
-    db_nudge.text = ""
+    db_nudge.job_id = job_id
+    # if not job_id:
+    #     db_nudge.text = ""
     db_nudge.save()

@@ -133,12 +133,12 @@ GOALS = [
             - (A) Calculated age > 50 years (think step by step)
         - Ask:
             - (N) What is your neck circumference (convert to cm if necessary)?
+        - Important! Save the StopBang entry to the database
         - Summarise from the Health History:
             - (G) Gender male
         - Calculate the STOP-Bang score (think step by step)
         - Summarise the STOP-Bang entry in order
         - Explain the risk
-        - Important! Save the StopBang entry to the database
         """,
     },
 ]

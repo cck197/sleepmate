@@ -41,7 +41,9 @@ SLEEPMATE_CONFIRMATION_WORDS = [
     "ready",
 ]
 
+# seconds
 SLEEPMATE_NUDGE_TIME = 60 * 5
+# SLEEPMATE_NUDGE_TIME = 10
 
 # Simon pointed out that  in the future, clients might have the option to choose
 # the tone of responses from their coaches to better align with their

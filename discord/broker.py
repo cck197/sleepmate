@@ -23,25 +23,32 @@ class MyClient(discord.Client):
 
 
 async def send_nudge(ctx, *, channel_id, db_user_id, n=0, max_retries=5):
-    if n > max_retries:
-        log.info(f"send_nudge {channel_id=} {db_user_id=} {n=} {max_retries=}")
-        return
     db_nudge = get_nudge(db_user_id)
-    log.info(f"send_nudge {channel_id=} {db_user_id=} {db_nudge.last_seen=}")
+    log.info(
+        f"send_nudge {channel_id=} {db_user_id=} {db_nudge.last_seen=} {n=} {max_retries=}"
+    )
+    if n > max_retries:
+        log.info(
+            f"send_nudge maxed out {channel_id=} {db_user_id=} {n=} {max_retries=}"
+        )
+        set_nudge(db_nudge, job_id=None)
+        return
     if should_send_nudge(db_nudge):
+        log.info(f"send_nudge sending {channel_id=} {db_user_id=} {db_nudge.text=}")
         client = MyClient(channel_id, db_nudge.text, intents=discord.Intents.default())
         await client.start(TOKEN)
-        set_nudge(db_nudge, nudged=False)
-    else:
-        # reschedule a nudge
-        await queue.enqueue(
-            "send_nudge",
-            channel_id=channel_id,
-            db_user_id=db_user_id,
-            n=n + 1,
-            max_retries=max_retries,
-            scheduled=time.time() + get_delay(SLEEPMATE_NUDGE_TIME, 5),
-        )
+        set_nudge(db_nudge, job_id=None)
+        return
+    # reschedule a nudge
+    job = await queue.enqueue(
+        "send_nudge",
+        channel_id=channel_id,
+        db_user_id=db_user_id,
+        n=n + 1,
+        max_retries=max_retries,
+        scheduled=time.time() + get_delay(SLEEPMATE_NUDGE_TIME, 5),
+    )
+    set_nudge(db_nudge, job_id=job.id)
 
 
 settings = {

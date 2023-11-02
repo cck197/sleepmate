@@ -1,6 +1,6 @@
 from langchain.chains import LLMChain
 from langchain.chat_models import ChatOpenAI
-from langchain.memory import ReadOnlySharedMemory
+from langchain.memory import ConversationBufferMemory, ReadOnlySharedMemory
 from langchain.prompts import ChatPromptTemplate
 
 from .agent import BaseAgent
@@ -39,6 +39,19 @@ def get_greeting(x: BaseAgent, utterance: str) -> str:
     """
     return get_completion(
         x.ro_memory, utterance, get_template(x.goal, x.db_user_id, get_greeting.__doc__)
+    )
+
+
+def get_greeting_no_memory(x: BaseAgent, utterance: str) -> str:
+    """Get a greeting with no state, i.e. no goal or memory."""
+    return get_completion(
+        ReadOnlySharedMemory(
+            memory=ConversationBufferMemory(
+                memory_key="chat_history", return_messages=True
+            )
+        ),
+        utterance,
+        get_template(None, x.db_user_id, get_greeting.__doc__),
     )
 
 
