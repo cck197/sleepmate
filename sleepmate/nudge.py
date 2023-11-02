@@ -55,9 +55,9 @@ def should_send_nudge(db_nudge: DBNudge, seconds: int = SLEEPMATE_NUDGE_TIME) ->
     return db_nudge.last_seen + timedelta(seconds=seconds) < datetime.now()
 
 
-def set_nudge(db_nudge: DBNudge, job_id) -> None:
+def set_nudge(db_nudge: DBNudge, job_id, reset_text=False) -> None:
     """Reset the nudge."""
     db_nudge.job_id = job_id
-    # if not job_id:
-    #     db_nudge.text = ""
+    if reset_text:
+        db_nudge.text = ""
     db_nudge.save()

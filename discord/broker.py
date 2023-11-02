@@ -37,7 +37,7 @@ async def send_nudge(ctx, *, channel_id, db_user_id, n=0, max_retries=5):
         log.info(f"send_nudge sending {channel_id=} {db_user_id=} {db_nudge.text=}")
         client = MyClient(channel_id, db_nudge.text, intents=discord.Intents.default())
         await client.start(TOKEN)
-        set_nudge(db_nudge, job_id=None)
+        set_nudge(db_nudge, job_id=None, reset_text=True)
         return
     # reschedule a nudge
     job = await queue.enqueue(

@@ -25,7 +25,12 @@ from .config import (
     SLEEPMATE_MAX_TOKENS,
 )
 from .goal import goal_refused
-from .helpful_scripts import get_confirmation_str, mongo_to_json, set_attribute
+from .helpful_scripts import (
+    get_confirmation_str,
+    mongo_to_json,
+    set_attribute,
+    strip_all_whitespace,
+)
 from .mi import get_completion
 from .structured import pydantic_to_mongoengine
 from .user import DBUser
@@ -166,25 +171,28 @@ def get_knowledge_answer(x: BaseAgent, utterance: str):
     prompt = ChatPromptTemplate(
         messages=[
             SystemMessagePromptTemplate.from_template(
-                """A human is asking the following question delimited by triple backticks:
-    
-                Question:
-                ```{input}```
+                strip_all_whitespace(
+                    """A human is asking the following question delimited by
+                    triple backticks:
+                    
+                    Question:
+                    ```{input}```
 
-                In a couple of paragraphs, answer the question.  Use bullet and
-                numbered lists where appropriate. Be definitive with your
-                response.
-                
-                Don't say anything that's not mentioned explicitly your
-                knowledge.  If you can't answer the question using the text, say
-                "Sorry I'm not sure." and nothing else.
-
-                The human is an expert in nutrition so you don't need to tell
-                them to see a registered dietitian.
-                
-                Your knowledge:
-                """
-                f"{context}"
+                    In a couple of paragraphs, answer the question.  Use bullet
+                    and numbered lists where appropriate. Be definitive with
+                    your response.
+                    
+                    Don't say anything that's not mentioned explicitly your
+                    knowledge.  If you can't answer the question using the text,
+                    say "Sorry I'm not sure." and nothing else.
+                    
+                    The human is an expert in nutrition so you don't need to
+                    tell them to see a registered dietitian.
+                    
+                    Your knowledge:
+                    """
+                    f"{context}"
+                )
             ),
             HumanMessagePromptTemplate.from_template("{input}"),
         ]

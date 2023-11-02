@@ -43,7 +43,8 @@ def get_greeting(x: BaseAgent, utterance: str) -> str:
 
 
 def get_greeting_no_memory(x: BaseAgent, utterance: str) -> str:
-    """Get a greeting with no state, i.e. no goal or memory."""
+    """Reach out and great the human by name after a short break. Be brief.
+    Fewer words are better."""
     return get_completion(
         ReadOnlySharedMemory(
             memory=ConversationBufferMemory(
@@ -51,7 +52,7 @@ def get_greeting_no_memory(x: BaseAgent, utterance: str) -> str:
             )
         ),
         utterance,
-        get_template(None, x.db_user_id, get_greeting.__doc__),
+        get_template(None, x.db_user_id, get_greeting_no_memory.__doc__),
     )
 
 

@@ -29,6 +29,12 @@ PINECONE_INDEX_NAME = os.environ.get("PINECONE_INDEX_NAME", "sleepmate")
 
 REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
 
+DISCOURSE_USERNAME = os.environ.get("DISCOURSE_USERNAME", "sleepmate")
+DISCOURSE_BASE_URL = os.environ.get(
+    "DISCOURSE_BASE_URL", "https://forum.nourishbalancethrive.com"
+)
+DISCOURSE_API_KEY = os.environ.get("DISCOURSE_API_KEY")
+
 SLEEPMATE_CONFIRMATION_WORDS = [
     "k",
     "okay",

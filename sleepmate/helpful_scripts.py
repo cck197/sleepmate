@@ -1,6 +1,7 @@
 import importlib
 import json
 import logging
+import re
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -17,6 +18,10 @@ from .config import SLEEPMATE_CONFIRMATION_WORDS
 
 def timedelta_in_years(td):
     return td.days / 365.25
+
+
+def strip_all_whitespace(s: str, replacement: str = " ") -> str:
+    return re.sub(r"\s+", replacement, s)
 
 
 def get_delay(base: int, n: int) -> int:
