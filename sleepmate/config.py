@@ -19,15 +19,15 @@ if DEBUG:
 
     langchain.verbose = True  # langchain.debug = True
 
-SLEEPMATE_MONGODB_HOST = os.environ.get("SLEEPMATE_MONGODB_HOST", "localhost")
-SLEEPMATE_MONGODB_NAME = os.environ.get("SLEEPMATE_MONGODB_NAME", "sleepmate")
-SLEEPMATE_MONGODB_PORT = os.environ.get("SLEEPMATE_MONGODB_PORT", 27017)
-SLEEPMATE_MONGODB_CONNECTION_STRING = (
-    f"mongodb://{SLEEPMATE_MONGODB_HOST}:{SLEEPMATE_MONGODB_PORT}/"
-)
+MONGODB_HOST = os.environ.get("MONGODB_HOST", "localhost")
+MONGODB_NAME = os.environ.get("MONGODB_NAME", "sleepmate")
+MONGODB_PORT = os.environ.get("MONGODB_PORT", 27017)
+MONGODB_CONNECTION_STRING = f"mongodb://{MONGODB_HOST}:{MONGODB_PORT}/"
 SLEEPMATE_DISCORD_CHANNEL_EXCLUDE = ["general"]
 
 PINECONE_INDEX_NAME = os.environ.get("PINECONE_INDEX_NAME", "sleepmate")
+
+REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
 
 SLEEPMATE_CONFIRMATION_WORDS = [
     "k",
@@ -40,6 +40,8 @@ SLEEPMATE_CONFIRMATION_WORDS = [
     "yep",
     "ready",
 ]
+
+SLEEPMATE_NUDGE_TIME = 60 * 5
 
 # Simon pointed out that  in the future, clients might have the option to choose
 # the tone of responses from their coaches to better align with their

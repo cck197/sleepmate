@@ -26,9 +26,9 @@ from .agent import BaseAgent
 from .audio import play
 from .cache import setup_cache
 from .config import (
+    MONGODB_CONNECTION_STRING,
     SLEEPMATE_AGENT_MODEL_NAME,
     SLEEPMATE_DEFAULT_MODEL_NAME,
-    SLEEPMATE_MONGODB_CONNECTION_STRING,
     SLEEPMATE_SAMPLING_TEMPERATURE,
 )
 from .db import *
@@ -153,7 +153,7 @@ class X(BaseAgent):
     def __call__(self, *args, **kwargs) -> str:
         return self.run(*args, **kwargs)
 
-    def proceed(self):
+    def proceed(self, utterance: str = "") -> Goal:
         """Returns the next goal. If the goal has changed, then the agent is
         reset."""
         self.goal_refused = False
@@ -179,7 +179,7 @@ class X(BaseAgent):
         return self.memory.chat_memory.messages[-k:] + [self.last_message]
 
     def run(self, utterance: str = "") -> str:
-        goal = self.proceed()
+        goal = self.proceed(utterance)
         if not utterance:
             utterance = goal.key
         output = self.agent_executor.run(
@@ -195,7 +195,7 @@ class X(BaseAgent):
         return output
 
     async def arun(self, utterance: str = "") -> str:
-        goal = self.proceed()
+        goal = self.proceed(utterance)
         if not utterance:
             utterance = goal.key
         output = await self.agent_executor.arun(
@@ -219,16 +219,16 @@ class X(BaseAgent):
             return_messages=True,
             k=k,
             chat_memory=MongoDBChatMessageHistory(
-                SLEEPMATE_MONGODB_CONNECTION_STRING,
+                MONGODB_CONNECTION_STRING,
                 self.db_user_id,
-                database_name=SLEEPMATE_MONGODB_NAME,
+                database_name=MONGODB_NAME,
             ),
         )
         self.ro_memory = ReadOnlySharedMemory(memory=self.memory)
 
     def clear_old_goal_chat_history(self):
         goal = self.get_next_goal()
-        if self.goal is not None and self.goal != goal:
+        if self.fixed_goal and self.goal is not None and self.goal != goal:
             log.info(
                 f"clear_chat_history: {self.goal} -> {goal} ({self.db_user_id} cleared)"
             )

@@ -96,7 +96,7 @@ def pydantic_to_mongoengine(pydantic_model, extra_fields=None):
     for name, field in pydantic_model.__fields__.items():
         cls = type_map.get(field.outer_type_)
         assert cls is not None, f"Unsupported field type: {field.outer_type_}"
-        fields[name] = cls(default=field.default, required=field.required)
+        fields[name] = cls(default=field.default, required=field.required, null=True)
     if extra_fields is not None:
         for name, field in extra_fields.items():
             fields[name] = field

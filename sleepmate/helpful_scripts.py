@@ -19,6 +19,10 @@ def timedelta_in_years(td):
     return td.days / 365.25
 
 
+def get_delay(base: int, n: int) -> int:
+    return base ** (1 + n / 10.0)
+
+
 def setup_logging(log_level=logging.INFO):
     fmt = "{asctime} {levelname:<8} {name} {message}"
     datefmt = "%Y-%m-%d %H:%M:%S"

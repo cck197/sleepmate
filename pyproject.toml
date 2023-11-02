@@ -18,6 +18,8 @@ python-dateutil = "^2.8.2"
 discord-py = "^2.3.2"
 pinecone-client = "^2.2.4"
 coloredlogs = "^15.0.1"
+chromadb = "^0.4.15"
+saq = {extras = ["web"], version = "^0.12.0"}
 
 [tool.poetry.group.dev.dependencies]
 ipython = "^8.15.0"

@@ -4,6 +4,10 @@ from langchain.pydantic_v1 import BaseModel, Field
 
 from .structured import pydantic_to_mongoengine
 
+######################################################################
+# Basic User model
+######################################################################
+
 
 class User(BaseModel):
     name: Optional[str] = Field(description="name")

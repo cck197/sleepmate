@@ -71,6 +71,17 @@ def get_open_question(x: BaseAgent, utterance: str) -> str:
     )
 
 
+def get_refusal_acknowledgement(x: BaseAgent, utterance: str) -> str:
+    """Use this when the human refuses to do something. Acknowledge their
+    refusal and say that's ok, we can always come back to that later if you
+    like. Be brief, fewer words are better."""
+    return get_completion(
+        x.ro_memory,
+        utterance,
+        get_template(x.goal, x.db_user_id, get_refusal_acknowledgement.__doc__),
+    )
+
+
 def get_listening_statement(x: BaseAgent, utterance: str) -> str:
     """Use this when the human is in distress. Hear what they are saying, and
     respond with a listening statement (empathy) to motivate behaviour change.
@@ -91,4 +102,5 @@ TOOLS = [
     get_affirmation,
     get_greeting,
     get_capabilities,
+    get_refusal_acknowledgement,
 ]
