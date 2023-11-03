@@ -72,7 +72,7 @@ def get_json_stop_bang(entry: dict) -> str:
 def save_stop_bang(x: BaseAgent, utterance: str):
     """Saves the StopBang to the database."""
     entry = get_stop_bang_from_memory(x)
-    print(f"{entry=}")
+    log.info(f"{entry=}")
     if entry is not None:
         log.info(f"save_stop_bang {entry=}")
         save_stop_bang_to_db(x.db_user_id, entry)
@@ -133,12 +133,13 @@ GOALS = [
             - (A) Calculated age > 50 years (think step by step)
         - Ask:
             - (N) What is your neck circumference (convert to cm if necessary)?
-        - Important! Save the StopBang entry to the database
         - Summarise from the Health History:
             - (G) Gender male
         - Calculate the STOP-Bang score (think step by step)
         - Summarise the STOP-Bang entry in order
         - Explain the risk
+        - Ask the human to confirm the STOP-Bang entry
+        - Important! Save the StopBang entry to the database
         """,
     },
 ]

@@ -35,7 +35,8 @@ def get_db_user(post):
 
 
 def get_utterance(content):
-    return content.split(f"@{DISCOURSE_USERNAME}")[1].strip()
+    """Remove the username from the content"""
+    return content.replace(f"@{DISCOURSE_USERNAME}", "").strip()
 
 
 @app.route("/", methods=["POST"])
@@ -48,7 +49,9 @@ def handle_webhook():
 
     # print(f"{content=}")
 
-    if f"@{DISCOURSE_USERNAME}" in content:
+    reply_to_user = post.get("reply_to_user", {}).get("username")
+
+    if (f"@{DISCOURSE_USERNAME}" in content) or (reply_to_user == DISCOURSE_USERNAME):
         db_user = get_db_user(post)
         log.info(f"{db_user.to_mongo()=}")
         x = X(username=db_user.username, hello=None, log_=log, display=False)
