@@ -3,9 +3,13 @@ import os
 # MAX_TOKENS = 8192
 SLEEPMATE_SAMPLING_TEMPERATURE = os.environ.get("SLEEPMATE_SAMPLING_TEMPERATURE", 0)
 # unfortunately, gpt-3.5-turbo just won't cut it
-SLEEPMATE_DEFAULT_MODEL_NAME = os.environ.get("SLEEPMATE_DEFAULT_MODEL_NAME", "gpt-4")
+SLEEPMATE_DEFAULT_MODEL_NAME = os.environ.get(
+    "SLEEPMATE_DEFAULT_MODEL_NAME", "gpt-4-1106-preview"
+)
 # for parsing output in memory to a JSON object
-SLEEPMATE_PARSER_MODEL_NAME = os.environ.get("SLEEPMATE_PARSER_MODEL_NAME", "gpt-4")
+SLEEPMATE_PARSER_MODEL_NAME = os.environ.get(
+    "SLEEPMATE_PARSER_MODEL_NAME", "gpt-4-1106-preview"
+)
 # fine tuned for selecting a function
 SLEEPMATE_AGENT_MODEL_NAME = os.environ.get(
     "SLEEPMATE_AGENT_MODEL_NAME", "gpt-4"

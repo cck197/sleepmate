@@ -39,6 +39,10 @@ def get_utterance(content):
     return content.replace(f"@{DISCOURSE_USERNAME}", "").strip()
 
 
+def was_tagged(content):
+    return f"@{DISCOURSE_USERNAME.lower()}" in content
+
+
 @app.route("/", methods=["POST"])
 def handle_webhook():
     data = request.get_json()
@@ -51,7 +55,7 @@ def handle_webhook():
 
     reply_to_user = post.get("reply_to_user", {}).get("username")
 
-    if (f"@{DISCOURSE_USERNAME}" in content) or (reply_to_user == DISCOURSE_USERNAME):
+    if was_tagged(content) or (reply_to_user == DISCOURSE_USERNAME):
         db_user = get_db_user(post)
         log.info(f"{db_user.to_mongo()=}")
         x = X(username=db_user.username, hello=None, log_=log, display=False)
