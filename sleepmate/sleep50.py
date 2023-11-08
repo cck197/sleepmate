@@ -251,7 +251,7 @@ GOALS = [
         do not remember.
         
         Nightmares
-        1. I have frightening dreams (if not, go to Item 37).
+        1. I have frightening dreams.
         2. I wake up from these dreams.
         3. I remember the content of these dreams.
         4. I can orientate quickly after these dreams.
