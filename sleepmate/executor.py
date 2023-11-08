@@ -26,7 +26,7 @@ from .agent import BaseAgent
 from .audio import play
 from .cache import setup_cache
 from .config import (
-    MONGODB_CONNECTION_STRING,
+    MONGODB_URI,
     SLEEPMATE_AGENT_MODEL_NAME,
     SLEEPMATE_DEFAULT_MODEL_NAME,
     SLEEPMATE_MEMORY_LENGTH,
@@ -221,7 +221,7 @@ class X(BaseAgent):
             return_messages=True,
             k=k,
             chat_memory=MongoDBChatMessageHistory(
-                MONGODB_CONNECTION_STRING,
+                MONGODB_URI,
                 self.db_user_id,
                 database_name=MONGODB_NAME,
             ),

@@ -1,9 +1,9 @@
 from bson import ObjectId
 from mongoengine import connect
 
-from .config import MONGODB_HOST, MONGODB_NAME, MONGODB_PORT
+from .config import MONGODB_NAME, MONGODB_URI
 
-db = connect(db=MONGODB_NAME, host=MONGODB_HOST, port=MONGODB_PORT)
+db = connect(host=MONGODB_URI)
 
 
 def get_collection_names(db_=None):

@@ -46,7 +46,7 @@ def was_tagged(content):
 @app.route("/", methods=["POST"])
 def handle_webhook():
     data = request.get_json()
-    log.debug(f"received webhook {data=}")
+    log.info(f"received webhook {data=}")
 
     post = data.get("post", {})
     content = post.get("raw", "")

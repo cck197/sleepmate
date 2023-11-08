@@ -27,7 +27,11 @@ if DEBUG:
 MONGODB_HOST = os.environ.get("MONGODB_HOST", "localhost")
 MONGODB_NAME = os.environ.get("MONGODB_NAME", "sleepmate")
 MONGODB_PORT = os.environ.get("MONGODB_PORT", 27017)
-MONGODB_CONNECTION_STRING = f"mongodb://{MONGODB_HOST}:{MONGODB_PORT}/"
+MONGODB_URI = os.environ.get(
+    "MONGODB_URI", f"mongodb://{MONGODB_HOST}:{MONGODB_PORT}/{MONGODB_NAME}"
+)
+
+
 SLEEPMATE_DISCORD_CHANNEL_EXCLUDE = ["general"]
 
 PINECONE_INDEX_NAME = os.environ.get("PINECONE_INDEX_NAME", "sleepmate")
