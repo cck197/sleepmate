@@ -22,6 +22,7 @@ chromadb = "^0.4.15"
 saq = {extras = ["web"], version = "^0.12.0"}
 pydiscourse = "^1.6.1"
 flask = "^3.0.0"
+gunicorn = "^21.2.0"
 
 [tool.poetry.group.dev.dependencies]
 ipython = "^8.15.0"

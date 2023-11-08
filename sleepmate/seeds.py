@@ -326,6 +326,7 @@ GOALS = [
         - Date of entry (ask to confirm default of yesterday's date)
         - Ask what they got done today
         - Summarise all the tasks in a bullet list and ask if correct
+        - If they didn't specify a date, get the date for yesterday and use that
         - Save the SEEDS diary entry to the database
         - Get N, the total number of tasks completed in the SEEDS diary entry
         - Give them a score N out of 15

@@ -217,6 +217,7 @@ GOALS = [
            "bad", "very bad"
         - Any medications or aids you used to help you sleep
         - Any other notes you'd like to add
+        - If they didn't specify a date, get the date for yesterday and use that
         - Summarise the results in a bullet list and ask if they're correct
         
         Only once the human has confirmed correctness, save the diary entry to

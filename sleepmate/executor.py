@@ -29,6 +29,7 @@ from .config import (
     MONGODB_CONNECTION_STRING,
     SLEEPMATE_AGENT_MODEL_NAME,
     SLEEPMATE_DEFAULT_MODEL_NAME,
+    SLEEPMATE_MEMORY_LENGTH,
     SLEEPMATE_SAMPLING_TEMPERATURE,
 )
 from .db import *
@@ -57,8 +58,9 @@ class X(BaseAgent):
         "meet",
         "health_history",
         "bmi",
-        "insomnia_severity_index",
-        "stop_bang",
+        "sleep50",
+        # "insomnia_severity_index",
+        # "stop_bang",
         "diary_entry",
         "daily_routine",
         "stimulus_control",
@@ -207,7 +209,7 @@ class X(BaseAgent):
 
     def load_memory(
         self,
-        k: int = 5,
+        k: int = SLEEPMATE_MEMORY_LENGTH,
         memory_key: str = "chat_history",
     ) -> None:
         self.memory = ConversationBufferWindowMemory(

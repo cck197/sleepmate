@@ -12,8 +12,9 @@ SLEEPMATE_PARSER_MODEL_NAME = os.environ.get(
 )
 # fine tuned for selecting a function
 SLEEPMATE_AGENT_MODEL_NAME = os.environ.get(
-    "SLEEPMATE_AGENT_MODEL_NAME", "gpt-4"
+    "SLEEPMATE_AGENT_MODEL_NAME", "gpt-4-1106-preview"
 )  # -0613")
+SLEEPMATE_MEMORY_LENGTH = os.environ.get("SLEEPMATE_MEMORY_LENGTH", 30)
 SLEEPMATE_DATADIR = os.environ.get("SLEEPMATE_DATADIR", "data")
 SLEEPMATE_MAX_TOKENS = os.environ.get("SLEEPMATE_MAX_TOKENS", 8192)
 DEBUG = os.environ.get("DEBUG", False)
