@@ -13,6 +13,7 @@ from .helpful_scripts import (
     parse_date,
     set_attribute,
 )
+from .sleep50 import get_last_sleep50_entry_from_db, sum_category
 from .structured import fix_schema, get_parsed_output, pydantic_to_mongoengine
 from .user import DBUser
 
@@ -110,6 +111,14 @@ def get_isi_dates(x: BaseAgent, utterance: str):
 
 
 def insomnia_severity_index(db_user_id: str) -> bool:
+    # get the results of the SLEEP-50 questionnaire
+    db_entry = get_last_sleep50_entry_from_db(db_user_id)
+    if db_entry is None:
+        return False
+    # check the insomnia questions
+    (n, total) = sum_category(db_entry, "insomnia")
+    if n == total:
+        return False  # no problem here
     if goal_refused(db_user_id, "insomnia_severity_index"):
         return False
     return DBISIEntry.objects(user=db_user_id).count() == 0

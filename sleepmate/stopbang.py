@@ -12,6 +12,7 @@ from .helpful_scripts import (
     mongo_to_json,
     set_attribute,
 )
+from .sleep50 import get_last_sleep50_entry_from_db, sum_category
 from .structured import fix_schema, get_parsed_output, pydantic_to_mongoengine
 from .user import DBUser
 
@@ -91,6 +92,14 @@ def get_last_stop_bang(x: BaseAgent, utterance: str):
 
 def stop_bang(db_user_id: str):
     """Returns True if StopBang should be collected."""
+    # get the results of the SLEEP-50 questionnaire
+    db_entry = get_last_sleep50_entry_from_db(db_user_id)
+    if db_entry is None:
+        return False
+    # check the apnea questions
+    (n, total) = sum_category(db_entry, "sleep_apnea")
+    if n == total:
+        return False  # no problem here
     if goal_refused(db_user_id, "stop_bang"):
         return False
     return DBStopBang.objects(user=db_user_id).count() == 0

@@ -119,6 +119,17 @@ DBSleep50Entry = pydantic_to_mongoengine(
 )
 
 
+def sum_category(db_entry: DBSleep50Entry, category: str) -> int:
+    """Returns the number of items in the category and the sum of the values. If
+    the sum of the values for the category is greater than the length, then the
+    human answered something greater than or equal to "somewhat" for at least
+    one of the questions."""
+    values = [
+        getattr(db_entry, key) for key in db_entry._fields.keys() if category in key
+    ]
+    return len(values), sum(values)
+
+
 def get_sleep50_entry_from_memory(x: BaseAgent) -> Sleep50Entry:
     return get_parsed_output(
         "summarise the last SLEEP-50 entry",
@@ -150,13 +161,18 @@ def save_sleep50_entry(x: BaseAgent, utterance: str):
         save_sleep50_entry_to_db(x.db_user_id, entry)
 
 
+def get_last_sleep50_entry_from_db(db_user_id: str) -> DBSleep50Entry:
+    """Returns the last SLEEP-50 entry from the database."""
+    return DBSleep50Entry.objects(user=db_user_id).order_by("-id").first()
+
+
 @set_attribute("return_direct", False)
 def get_last_sleep50_entry(x: BaseAgent, utterance: str):
     """Returns the last SLEEP-50 entry."""
-    entry = DBSleep50Entry.objects(user=x.db_user_id).order_by("-id").first()
-    if entry is None:
-        return "No Insomnia Severity Index entries found"
-    entry = entry.to_mongo().to_dict()
+    db_entry = get_last_sleep50_entry_from_db(x.db_user_id)
+    if db_entry is None:
+        return "No SLEEP-50 entries found"
+    entry = db_entry.to_mongo().to_dict()
     log.info(f"get_last_sleep50_entry {entry=}")
     return get_json_sleep50_entry(entry)
 

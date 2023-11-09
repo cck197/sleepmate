@@ -59,8 +59,8 @@ class X(BaseAgent):
         "health_history",
         "bmi",
         "sleep50",
-        # "insomnia_severity_index",
-        # "stop_bang",
+        "insomnia_severity_index",  # contingent on insomnia in SLEEP-50
+        "stop_bang",  # contingent on apnea in SLEEP-50
         "diary_entry",
         "daily_routine",
         "stimulus_control",

@@ -2,6 +2,7 @@ import logging
 import os
 from datetime import datetime
 from pathlib import Path
+from typing import List
 
 import pinecone
 import tiktoken
@@ -123,6 +124,21 @@ def download_files(path="data"):
 def count_tokens(text: str) -> int:
     encoding = tiktoken.encoding_for_model(SLEEPMATE_DEFAULT_MODEL_NAME)
     return len(encoding.encode(text))
+
+
+def add_to_knowledge(path: str) -> List[str]:
+    """load a single PDF/text file into the knowledge base"""
+    file = Path(path)
+    assert file.exists(), f"{file} does not exist"
+    loader_cls = loader_map.get(file.suffix)
+    assert loader_cls is not None, f"no loader for {file}"
+    log.info(f"loading `{file}'")
+    pages = loader_cls(str(file)).load_and_split()
+    assert pages, "no pages loaded"
+    index = pinecone.Index(PINECONE_INDEX_NAME)
+    embeddings = OpenAIEmbeddings()
+    vectorstore = Pinecone(index, embeddings, "text")
+    return vectorstore.add_documents(pages)
 
 
 def load_knowledge(path="data", overwrite=False, metric="cosine", dimension=1536):
