@@ -321,12 +321,11 @@ GOALS = [
 
         Steps: 
         - Ask if now is a good time to record a SEEDS diary entry
+        - Get the date for yesterday by calling get_date(1)
         - Get their predefined SEEDS from the database and summarise all the
         predefined tasks in a bullet list
-        - Date of entry (ask to confirm default of yesterday's date)
-        - Ask what they got done today
-        - Summarise all the tasks in a bullet list and ask if correct
-        - If they didn't specify a date, get the date for yesterday and use that
+        - Ask what they got done yesterday (print the full date)
+        - Summarise all the tasks in a categorised bullet list and ask if correct
         - Save the SEEDS diary entry to the database
         - Get N, the total number of tasks completed in the SEEDS diary entry
         - Give them a score N out of 15

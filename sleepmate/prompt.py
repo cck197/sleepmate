@@ -52,7 +52,8 @@ def get_date(x: object, utterance: str):
     example, if you want to get yesterday's date, you would call this function
     with 1 as the argument. And if you wanted today's date you would call this
     with 0."""
-    return datetime.now() - timedelta(days=int(utterance))
+    # return the date formatted like like November 8th, 2023
+    return (datetime.now() - timedelta(days=int(utterance))).strftime("%B %d, %Y")
 
 
 TOOLS = [get_date]

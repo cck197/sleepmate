@@ -198,14 +198,13 @@ GOALS = [
     },
     {
         "diary_entry": f"""
-        Your goal is to record a sleep diary entry for a given night. First ask
-        if now is a good time to record a diary entry. Once they confirm by
-        saying something like {get_confirmation_str()}, Then guide them through
-        the following questions one at a time.  Don't give all the questions at
-        once.  Wait for them to answer each question.
+        Your goal is to record a sleep diary entry for a given night. Guide the
+        human through the following steps one at a time.  Don't give all the
+        questions at once. Wait for them to answer each question.
         
-        - Date of entry (ask to confirm default of yesterday's date)
-        - Time you went to bed 
+        - Ask if now is a good time to record a sleep diary entry
+        - Get the date for yesterday by calling get_date(1)
+        - Time you went to bed yesterday (print the full date)
         - Time you tried to fall asleep
         - How long it took you to fall asleep (in minutes)
         - How many times you woke up during the night (number)
@@ -217,8 +216,7 @@ GOALS = [
            "bad", "very bad"
         - Any medications or aids you used to help you sleep
         - Any other notes you'd like to add
-        - If they didn't specify a date, get the date for yesterday and use that
-        - Summarise the results in a bullet list and ask if they're correct
+        - Summarise their answers in a bullet list and ask if they're correct
         
         Only once the human has confirmed correctness, save the diary entry to
         the database.
