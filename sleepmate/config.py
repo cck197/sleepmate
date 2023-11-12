@@ -31,6 +31,18 @@ MONGODB_URI = os.environ.get(
     "MONGODB_URI", f"mongodb://{MONGODB_HOST}:{MONGODB_PORT}/{MONGODB_NAME}"
 )
 
+WHOOP_CLIENT_ID = os.environ.get("WHOOP_CLIENT_ID")
+WHOOP_CLIENT_SECRET = os.environ.get("WHOOP_CLIENT_SECRET")
+WHOOP_REDIRECT_URI = os.environ.get("WHOOP_REDIRECT_URI")
+WHOOP_SCOPE = [
+    "offline",
+    "read:recovery",
+    "read:cycles",
+    "read:workout",
+    "read:sleep",
+    "read:profile",
+    "read:body_measurement",
+]
 
 SLEEPMATE_DISCORD_CHANNEL_EXCLUDE = ["general"]
 
