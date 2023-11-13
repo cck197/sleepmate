@@ -16,6 +16,12 @@ setup_logging()
 log = logging.getLogger("whoop.app")
 
 
+@app.route("/whoop_update", methods=["GET"])
+def whoop_update():
+    log.info(f"{request=}")
+    return "Success!", 200
+
+
 @app.route("/whoop_login", methods=["GET"])
 def whoop_login():
     state = request.args.get("state")
@@ -28,4 +34,4 @@ def whoop_login():
     assert db_token, "token for state not found"
     db_token.update(**token)
     db_token.save()
-    return "Success! You can close this tab.", 200
+    return "Success!", 200

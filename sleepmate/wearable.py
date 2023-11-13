@@ -13,16 +13,16 @@ log = logging.getLogger(__name__)
 
 
 class Wearables(BaseModel):
-    whoop: bool = Field(description="WHOOP Strap")
-    fitbit: bool = Field(description="Fitbit Devices")
-    apple_watch: bool = Field(description="Apple Watch")
-    garmin: bool = Field(description="Garmin Wearables")
-    samsung: bool = Field(description="Samsung Galaxy Watch")
-    oura: bool = Field(description="Oura Ring")
-    xiaomi: bool = Field(description="Xiaomi Mi Band")
-    polar: bool = Field(description="Polar Watches")
-    withings: bool = Field(description="Withings Sleep Tracking Mat")
-    amazfit: bool = Field(description="Amazfit Smartwatches")
+    whoop: bool = Field(description="WHOOP Strap", default=False)
+    fitbit: bool = Field(description="Fitbit Devices", default=False)
+    apple_watch: bool = Field(description="Apple Watch", default=False)
+    garmin: bool = Field(description="Garmin Wearables", default=False)
+    samsung: bool = Field(description="Samsung Galaxy Watch", default=False)
+    oura: bool = Field(description="Oura Ring", default=False)
+    xiaomi: bool = Field(description="Xiaomi Mi Band", default=False)
+    polar: bool = Field(description="Polar Watches", default=False)
+    withings: bool = Field(description="Withings Sleep Tracking Mat", default=False)
+    amazfit: bool = Field(description="Amazfit Smartwatches", default=False)
     other: str = Field(description="Other (specify)", default=None)
 
 
@@ -38,7 +38,8 @@ def get_json_wearables(entry: dict) -> str:
 
 @set_attribute("return_direct", False)
 def get_wearables(x: BaseAgent, utterance: str):
-    """Returns wearables record."""
+    """Use this to retrieve the record wearable devices the human wishes to
+    integrate."""
     db_entry = DBWearables.objects(user=x.db_user_id).first()
     if db_entry is None:
         return f"No record of wearables for {x.db_user_id}."

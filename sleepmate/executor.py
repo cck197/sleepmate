@@ -55,8 +55,9 @@ log = logging.getLogger(__name__)
 
 class X(BaseAgent):
     DEFAULT_GOAL_LIST = [
-        "meet",
         "wearable_probe",
+        "whoop",
+        "meet",
         "health_history",
         "bmi",
         "sleep50",
