@@ -28,4 +28,4 @@ def whoop_login():
     assert db_token, "token for state not found"
     db_token.update(**token)
     db_token.save()
-    return "Authenticated", 200
+    return "Success! You can close this tab.", 200

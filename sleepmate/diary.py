@@ -7,7 +7,6 @@ from mongoengine import ReferenceField
 from .agent import BaseAgent
 from .goal import goal_refused
 from .helpful_scripts import (
-    get_confirmation_str,
     get_date_fields,
     get_start_end,
     json_dumps,
