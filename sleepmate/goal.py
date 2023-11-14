@@ -44,3 +44,8 @@ def add_goal_refused(db_user_id: str, goal: str) -> DBGoalRefusal:
     return DBGoalRefusal(
         **{"user": db_user_id, "goal": goal, "date": datetime.now()}
     ).save()
+
+
+def clear_goal_refused(db_user_id: str, goal: str) -> None:
+    """Clears goal refusal for the given user and goal."""
+    DBGoalRefusal.objects(user=db_user_id, goal=goal).delete()

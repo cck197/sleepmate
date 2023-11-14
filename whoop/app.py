@@ -16,9 +16,9 @@ setup_logging()
 log = logging.getLogger("whoop.app")
 
 
-@app.route("/whoop_update", methods=["GET"])
+@app.route("/whoop_update", methods=["POST"])
 def whoop_update():
-    log.info(f"{request=}")
+    log.info(f"{request.form=}")
     return "Success!", 200
 
 

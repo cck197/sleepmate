@@ -26,9 +26,21 @@ class Wearables(BaseModel):
     other: str = Field(description="Other (specify)", default=None)
 
 
+SUPPORTED_WEARABLES = [
+    "whoop",
+]
+
 DBWearables = pydantic_to_mongoengine(
     Wearables, extra_fields={"user": ReferenceField(DBUser, required=True)}
 )
+
+
+def user_integrated_supported_wearable(db_user_id: str) -> bool:
+    """Returns True if the user has integrated a supported wearable device."""
+    db_entry = DBWearables.objects(user=db_user_id).first()
+    if db_entry is None:
+        return False
+    return any(getattr(db_entry, wearable) for wearable in SUPPORTED_WEARABLES)
 
 
 def get_json_wearables(entry: dict) -> str:

@@ -58,7 +58,7 @@ def get_greeting_no_memory(x: BaseAgent, utterance: str) -> str:
 
 def get_affirmation(x: BaseAgent, utterance: str) -> str:
     """Use this whenever the human talks about what they did with any
-    positivity. Affirmation is less of a judgment, more of an appreciation of
+    positivity. Affirmation is less of a judgement, more of an appreciation of
     positive qualities and behaviors. It is more likely to lift motivation and
     inspire further achievement. Praise the process, NOT the outcome. Be brief,
     fewer words are better.

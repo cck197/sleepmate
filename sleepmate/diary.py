@@ -18,6 +18,7 @@ from .mi import get_completion, get_template
 from .prompt import get_template
 from .structured import fix_schema, get_parsed_output, pydantic_to_mongoengine
 from .user import DBUser
+from .wearable import user_integrated_supported_wearable
 
 log = logging.getLogger(__name__)
 
@@ -164,6 +165,10 @@ def diary_entry(db_user_id: str):
     """Returns True if it's time to ask the human to record a sleep diary
     entry."""
     if goal_refused(db_user_id, "diary_entry"):
+        return False
+
+    # don't ask if the user has integrated a supported wearable device
+    if user_integrated_supported_wearable(db_user_id):
         return False
 
     end = datetime.combine(date.today(), time())

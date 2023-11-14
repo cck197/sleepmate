@@ -56,14 +56,15 @@ log = logging.getLogger(__name__)
 class X(BaseAgent):
     DEFAULT_GOAL_LIST = [
         "wearable_probe",
-        "whoop",
+        "whoop_import",
         "meet",
         "health_history",
         "bmi",
         "sleep50",
         "insomnia_severity_index",  # contingent on insomnia in SLEEP-50
         "stop_bang",  # contingent on apnea in SLEEP-50
-        "diary_entry",
+        "diary_entry",  # contingent on no wearable in wearable_probe
+        "whoop_sleep",  # contingent on whoop in wearable_probe
         "daily_routine",
         "stimulus_control",
         "stress_audit",
