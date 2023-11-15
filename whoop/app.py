@@ -9,6 +9,7 @@ from sleepmate.db import *
 from sleepmate.helpful_scripts import setup_logging
 from sleepmate.whoop import (
     WHOOP_CLIENT_ID,
+    WHOOP_REDIRECT_URI,
     WHOOP_TOKEN_URL,
     get_whoop_oauth2_session,
     get_whoop_token,
@@ -20,7 +21,7 @@ setup_logging()
 
 log = logging.getLogger("whoop.app")
 
-log.info(f"starting WHOOP server {WHOOP_CLIENT_ID=}")
+log.info(f"starting WHOOP server {WHOOP_CLIENT_ID=} {WHOOP_REDIRECT_URI=}")
 
 
 def log_request():

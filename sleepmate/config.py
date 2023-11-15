@@ -44,6 +44,10 @@ WHOOP_SCOPE = [
     "read:body_measurement",
 ]
 
+TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID")
+TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN")
+TWILIO_NUMBER = os.environ.get("TWILIO_NUMBER")
+
 SLEEPMATE_DISCORD_CHANNEL_EXCLUDE = ["general"]
 
 PINECONE_INDEX_NAME = os.environ.get("PINECONE_INDEX_NAME", "sleepmate")

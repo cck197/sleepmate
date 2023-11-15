@@ -6,6 +6,10 @@ authors = ["Christopher Kelly <chris@nourishbalancethrive.com>"]
 readme = "README.md"
 packages = [{include = "sleepmate"}]
 
+# poetry export -o requirements.txt --without local
+[tool.poetry.group.local.dependencies]
+whoop-client = { path = "./whoop-client" }
+
 [tool.poetry.dependencies]
 python = "^3.11"
 openai = "^0.28.1"
@@ -23,8 +27,8 @@ saq = {extras = ["web"], version = "^0.12.0"}
 pydiscourse = "^1.6.1"
 flask = "^3.0.0"
 gunicorn = "^21.2.0"
-whoop-client = { path = "./whoop-client" }
 authlib = "^1.2.1"
+twilio = "^8.10.1"
 
 [tool.poetry.group.dev.dependencies]
 ipython = "^8.15.0"

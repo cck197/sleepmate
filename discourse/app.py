@@ -43,8 +43,8 @@ def was_tagged(content):
     return f"@{DISCOURSE_USERNAME.lower()}" in content
 
 
-@app.route("/", methods=["POST"])
-def handle_webhook():
+@app.route("/discourse", methods=["POST"])
+def discourse():
     data = request.get_json()
     log.info(f"received webhook {data=}")
 
