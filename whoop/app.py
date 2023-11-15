@@ -3,6 +3,8 @@ import logging
 from dotenv import load_dotenv
 from flask import Flask, request
 
+load_dotenv()
+
 from sleepmate.db import *
 from sleepmate.helpful_scripts import setup_logging
 from sleepmate.whoop import (
@@ -11,8 +13,6 @@ from sleepmate.whoop import (
     get_whoop_oauth2_session,
     get_whoop_token,
 )
-
-load_dotenv()
 
 app = Flask(__name__)
 
