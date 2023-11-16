@@ -11,8 +11,10 @@ from sleepmate.whoop import (
     WHOOP_CLIENT_ID,
     WHOOP_REDIRECT_URI,
     WHOOP_TOKEN_URL,
+    get_user_by_whoop_id,
     get_whoop_oauth2_session,
     get_whoop_token,
+    import_whoop_sleep_by_id,
 )
 
 app = Flask(__name__)
@@ -46,7 +48,15 @@ def before_request():
 
 @app.route("/whoop_update", methods=["POST"])
 def whoop_update():
-    log.info(f"{request.form=}")
+    data = request.json
+    if data["type"] != "sleep.updated":
+        log.info(f"ignoring {data=}")
+        return "Success!", 200
+    db_entry = import_whoop_sleep_by_id(
+        get_user_by_whoop_id(data["user_id"]), int(data["id"])
+    )
+    db_entry.save()
+    log.info(f"{db_entry.to_mongo()=}")
     return "Success!", 200
 
 

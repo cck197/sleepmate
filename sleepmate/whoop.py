@@ -120,6 +120,26 @@ DBWhoopSleepDiaryEntry = pydantic_to_mongoengine(
 )
 
 
+def refresh_token(db_user_id: str) -> bool:
+    """Refreshes the WHOOP token for the given user."""
+    db_token = get_whoop_token(user=db_user_id)
+    if db_token is None:
+        return False
+    token = get_whoop_oauth2_session().refresh_token(
+        WHOOP_TOKEN_URL, refresh_token=db_token.refresh_token
+    )
+    db_token.update(**token)
+    db_token.save()
+    return True
+
+
+def refresh_token_by_whoop_id(whoop_user_id: str) -> bool:
+    db_entry = get_user_by_whoop_id(whoop_user_id)
+    if db_entry is None:
+        return False
+    return refresh_token(db_entry.user.id)
+
+
 def clear_whoop_data(db_user_id: str) -> None:
     """Clears all WHOOP data for the given user."""
     DBWhoopToken.objects(user=db_user_id).delete()
@@ -148,17 +168,39 @@ def update_user_from_whoop(db_user_id: str) -> DBUser:
     return db_user
 
 
-def whoop_exception_handler(func):
-    """Decorator to handle WHOOP exceptions and return an OAuth2 URL."""
+def whoop_auth_refresh_handler(func):
+    """Decorator to refresh OAuth2 token on UnauthorizedException."""
 
     def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)
         except UnauthorizedException as e:
-            log.error(e)
-            return get_whoop_auth_url_(args[0])
+            log.info(e)
+            try:
+                refresh_token(args[0])
+                return func(*args, **kwargs)
+            except Exception as e:
+                log.exception(e)
 
     return wrapper
+
+
+@whoop_auth_refresh_handler
+def import_whoop_sleep_by_id(db_user_id: str, whoop_sleep_id: int) -> DBWhoopSleep:
+    api_instance = SleepApi(get_whoop_api_client(db_user_id))
+    sleep = api_instance.get_sleep_by_id(whoop_sleep_id)
+    return DBWhoopSleep(
+        whoop_id=sleep.id,
+        whoop_user_id=sleep.user_id,
+        json_dumps=json_dumps(sleep.model_dump()),
+    )
+
+
+def get_user_by_whoop_id(whoop_user_id: int) -> DBUser:
+    db_entry = DBWhoopUser.objects(whoop_user_id=whoop_user_id).first()
+    if db_entry is None:
+        return None
+    return db_entry.user
 
 
 def import_whoop_sleep(db_user_id: str) -> list[DBWhoopSleep]:
@@ -169,7 +211,7 @@ def import_whoop_sleep(db_user_id: str) -> list[DBWhoopSleep]:
     for sleep in api_response.records:
         db_entry = DBWhoopSleep.objects(whoop_id=sleep.id).first()
         if db_entry is not None:
-            db_entry.delete()
+            continue
         results.append(
             DBWhoopSleep(
                 whoop_id=sleep.id,
@@ -217,11 +259,12 @@ def get_whoop_auth_url(x: BaseAgent, utterance: str):
     return get_whoop_auth_url_(x.db_user_id)
 
 
-@whoop_exception_handler
+@whoop_auth_refresh_handler
 def import_whoop_sleep_data_(db_user_id: str) -> str:
     db_entries = import_whoop_sleep(db_user_id)
     log.info(f"import_whoop_sleep_data: {len(db_entries)=}")
-    [db_entry.save() for db_entry in db_entries]
+    # save the oldest first the order is important later
+    [db_entry.save() for db_entry in reversed(db_entries)]
     return "Success!"
 
 
@@ -231,7 +274,7 @@ def import_whoop_sleep_data(x: BaseAgent, utterance: str) -> str:
     return import_whoop_sleep_data_(x.db_user_id)
 
 
-@whoop_exception_handler
+@whoop_auth_refresh_handler
 def import_whoop_user_data_(db_user_id: str) -> str:
     db_user = update_user_from_whoop(db_user_id)
     log.info(f"import_whoop_user_data: {db_user.to_mongo()=}")
@@ -257,7 +300,7 @@ def get_whoop_sleep_data(x: BaseAgent, utterance: str) -> str:
         return "No WHOOP user ID found."
     db_entry = (
         DBWhoopSleep.objects(whoop_user_id=db_entry.whoop_user_id)
-        .order_by("id")
+        .order_by("-id")
         .first()
     )
     if db_entry is None:
@@ -333,7 +376,7 @@ def whoop_sleep(db_user_id: str) -> bool:
         return False
 
     end = datetime.combine(date.today(), time())
-    start = end - timedelta(days=1)
+    start = end - timedelta(days=0)
 
     return DBWhoopSleepDiaryEntry.objects(user=db_user_id, date__gte=start).count() == 0
 
