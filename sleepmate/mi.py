@@ -35,7 +35,8 @@ def get_capabilities(x: BaseAgent, utterance: str) -> str:
 
 def get_greeting(x: BaseAgent, utterance: str) -> str:
     """Use this when the human says hello. Greet them by name. Occasionally ask
-    them how they're feeling right now, in this moment.
+    them how they're feeling right now, in this moment. Remember that they might
+    be feeling tired so be sensitive.
     """
     return get_completion(
         x.ro_memory, utterance, get_template(x.goal, x.db_user_id, get_greeting.__doc__)
