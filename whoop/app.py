@@ -1,3 +1,6 @@
+import base64
+import hashlib
+import hmac
 import logging
 
 from dotenv import load_dotenv
@@ -9,6 +12,7 @@ from sleepmate.db import *
 from sleepmate.helpful_scripts import setup_logging
 from sleepmate.whoop import (
     WHOOP_CLIENT_ID,
+    WHOOP_CLIENT_SECRET,
     WHOOP_REDIRECT_URI,
     WHOOP_TOKEN_URL,
     get_user_by_whoop_id,
@@ -26,28 +30,27 @@ log = logging.getLogger("whoop.app")
 log.info(f"starting WHOOP server {WHOOP_CLIENT_ID=} {WHOOP_REDIRECT_URI=}")
 
 
-def log_request():
-    headers = "\n".join(f"{k}: {v}" for k, v in request.headers.items())
-    log_message = f"Request {request.method} {request.url}\nHeaders:\n{headers}"
-
-    if request.method == "POST":
-        if request.json:
-            post_data = request.json
-            log_message += f"\nJSON POST Data: {post_data}"
-        elif request.form:
-            post_data = request.form
-            log_message += f"\nForm POST Data: {post_data}"
-
-    log.info(log_message)
-
-
-@app.before_request
-def before_request():
-    log_request()
+def check_signature() -> bool:
+    """Check the signature of the request to make sure it's from WHOOP."""
+    # https://developer.whoop.com/docs/developing/webhooks/#webhooks-security
+    timestamp_header = request.headers["X-Whoop-Signature-Timestamp"].encode()
+    request_signature = request.headers["X-Whoop-Signature"]
+    encoded_string = base64.b64encode(
+        hmac.new(
+            WHOOP_CLIENT_SECRET.encode(),
+            timestamp_header + request.data,
+            hashlib.sha256,
+        ).digest()
+    ).decode()
+    ok = encoded_string == request_signature
+    log.info(f"{encoded_string=} {request_signature=} {ok=}")
+    return ok
 
 
 @app.route("/whoop_update", methods=["POST"])
 def whoop_update():
+    if not check_signature():
+        return "Invalid signature", 403
     data = request.json
     if data["type"] != "sleep.updated":
         log.info(f"ignoring {data=}")
