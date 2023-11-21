@@ -361,7 +361,14 @@ def save_whoop_sleep_diary_entry(x: BaseAgent, utterance: str):
     save_whoop_sleep_diary_entry_to_db(x.db_user_id, entry)
 
 
+def has_whoop(db_user_id: str) -> bool:
+    return DBWearables.objects(user=db_user_id, whoop=True).count() > 0
+
+
 def whoop_import(db_user_id: str) -> bool:
+    if not has_whoop(db_user_id):
+        return False
+
     if goal_refused(db_user_id, "whoop_import"):
         return False
 
@@ -369,10 +376,10 @@ def whoop_import(db_user_id: str) -> bool:
 
 
 def whoop_sleep(db_user_id: str) -> bool:
-    if goal_refused(db_user_id, "whoop_sleep"):
+    if not has_whoop(db_user_id):
         return False
 
-    if DBWearables.objects(user=db_user_id, whoop=True).count() == 0:
+    if goal_refused(db_user_id, "whoop_sleep"):
         return False
 
     end = datetime.combine(date.today(), time())
