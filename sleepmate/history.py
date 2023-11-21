@@ -156,7 +156,7 @@ GOALS = [
         14. Living with (Alone, Family, Friends)
         15. Type of residence (House, Apartment, etc.)
         16. Noise Level in the living area
-        17. What does success look like?
+        17. When it comes to sleep, what does success look like?
         18. What have you tried previously that helped?
         19. What have you tried previously that didn't help?
         20. Anything else you'd like to add?
