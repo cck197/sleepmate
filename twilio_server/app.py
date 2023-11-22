@@ -18,7 +18,7 @@ setup_logging()
 
 log = logging.getLogger("twilio.bot")
 
-log.info(f"starting twilio bot {TWILIO_ACCOUNT_SID=}")
+log.info(f"starting twilio bot {TWILIO_ACCOUNT_SID=} {TWILIO_NUMBER=}")
 
 client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
 
