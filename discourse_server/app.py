@@ -55,7 +55,12 @@ def discourse():
 
     reply_to_user = post.get("reply_to_user", {}).get("username")
 
-    if was_tagged(content) or (reply_to_user == DISCOURSE_USERNAME):
+    # don't respond when the user deleted their post
+    # do respond when the bot is tagged
+    # or when the user replies to one of the bot's posts
+    if not post.get("user_deleted") and (
+        was_tagged(content) or (reply_to_user == DISCOURSE_USERNAME)
+    ):
         db_user = get_db_user(post)
         log.info(f"{db_user.to_mongo()=}")
         x = X(username=db_user.username, hello=None, log_=log, display=False)
