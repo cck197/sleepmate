@@ -8,8 +8,8 @@ COPY . .
 
 RUN pip install -r requirements.txt
 
-RUN cd whoop-client && python setup.py bdist_wheel
-RUN pip install whoop-client/dist/whoop_client-1.0.0-py3-none-any.whl
+RUN cd whoop_client && python setup.py bdist_wheel
+RUN pip install whoop_client/dist/whoop_client-1.0.0-py3-none-any.whl
 
 
 EXPOSE 8080
