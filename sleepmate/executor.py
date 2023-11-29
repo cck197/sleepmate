@@ -61,6 +61,7 @@ class X(BaseAgent):
         "health_history",
         "bmi",
         "sleep50",
+        "back_pain",  # contingent on back pain in health_history
         "insomnia_severity_index",  # contingent on insomnia in SLEEP-50
         "stop_bang",  # contingent on apnea in SLEEP-50
         "diary_entry",  # contingent on no wearable in wearable_probe

@@ -11,7 +11,7 @@ from langchain.memory import ConversationBufferWindowMemory
 # from langchain.llms import OpenAI
 from langchain.output_parsers import PydanticOutputParser
 from langchain.prompts import PromptTemplate
-from langchain.pydantic_v1 import BaseModel
+from langchain.pydantic_v1 import BaseModel, Field
 from langchain.schema import BaseMessage, OutputParserException
 from mongoengine import (
     BooleanField,
@@ -24,8 +24,48 @@ from mongoengine import (
 )
 
 from .config import SLEEPMATE_PARSER_MODEL_NAME
+from .helpful_scripts import json_dumps
 
 log = logging.getLogger(__name__)
+
+
+class SummaryResult(BaseModel):
+    found: bool = Field(description="whether not the data say anything relevant")
+    summary: str = Field(description="text summary")
+
+
+def get_string_fields_with_values(document: Document) -> dict:
+    return {
+        field_name: getattr(document, field_name)
+        for field_name, field_type in document._fields.items()
+        if isinstance(field_type, StringField)
+    }
+
+
+def get_document_summary(query: str, document: Document) -> SummaryResult:
+    parser = PydanticOutputParser(pydantic_object=SummaryResult)
+    prompt = PromptTemplate(
+        template="What does these data from a human say about {query}? "
+        "Summarise in a few words from {data}. "
+        "Start the summary with it seems like... as if you were talking to the human. "
+        "Keep it short and simple. Stay on topic. "
+        "Output a JSON object with the following properties: "
+        "- `found` whether or not the provided data says anything specific about {query}"
+        "- `summary` the text summary",
+        input_variables=["query", "data"],
+    )
+    llm = ChatOpenAI(model_name=SLEEPMATE_PARSER_MODEL_NAME, temperature=0.0)
+    chain = LLMChain(llm=llm, prompt=prompt)
+    output = chain(
+        {
+            "query": query,
+            "data": json_dumps(get_string_fields_with_values(document)),
+        }
+    )
+    try:
+        return parser.parse(output["text"])
+    except OutputParserException as e:
+        log.error(f"get_document_summary: {e=}")
 
 
 def fix_schema(cls, date_fields):
