@@ -54,9 +54,18 @@ class HealthHistory(HealthHistory_):
     def schema(cls):
         return fix_schema(HealthHistory_, date_fields)
 
-    @validator(*date_fields, pre=True)
+    @validator("date", pre=True)
     def convert_date_to_datetime(cls, value):
         return parse_date(value)
+
+    @validator("date_of_birth", pre=True)
+    def validate_dob(cls, value):
+        date_of_birth = parse_date(value)
+        current_date = datetime.now()
+        # manually adjust the year if it is in the future
+        if date_of_birth.year > current_date.year:
+            date_of_birth = date_of_birth.replace(year=date_of_birth.year - 100)
+        return date_of_birth
 
 
 DBHealthHistory = pydantic_to_mongoengine(
