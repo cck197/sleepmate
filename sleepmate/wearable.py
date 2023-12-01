@@ -58,6 +58,15 @@ def get_wearables(x: BaseAgent, utterance: str):
     return get_json_wearables(db_entry.to_mongo().to_dict())
 
 
+@set_attribute("return_direct", False)
+def remove_wearable(x: BaseAgent, utterance: str):
+    """Use this when the human indicates they no longer have a wearable tracking
+    device."""
+    log.info(f"remove_wearable {x.db_user_id=} {utterance=}")
+    # it'd be nice to just update the record but this'll do for now
+    DBWearables.objects(user=x.db_user_id).delete()
+
+
 def get_wearables_from_memory(x: BaseAgent) -> Wearables:
     return get_parsed_output(
         "summarise the wearables", x.get_latest_messages, Wearables
@@ -122,4 +131,5 @@ GOALS = [
 TOOLS = [
     get_wearables,
     save_wearables,
+    remove_wearable,
 ]

@@ -8,7 +8,7 @@ packages = [{include = "sleepmate"}]
 
 # poetry export -o requirements.txt --without local
 [tool.poetry.group.local.dependencies]
-whoop-client = { path = "./whoop-client" }
+whoop-client = { path = "./whoop_client" }
 
 [tool.poetry.dependencies]
 python = "^3.11"
