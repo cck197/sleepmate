@@ -121,6 +121,7 @@ GOALS = [
         - Withings Sleep Tracking Mat
         - Amazfit Smartwatches
         - Other (specify)
+        - None of the above (skip)
 
         Once the humans has confirmed what devices they have, save a record of
         the wearables to the database.
