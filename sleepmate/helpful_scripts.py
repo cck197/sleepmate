@@ -12,6 +12,8 @@ import coloredlogs
 from dateutil.parser import ParserError
 from dateutil.parser import parse as date_parser
 from IPython.display import Markdown, display
+from rich.console import Console
+from rich.markdown import Markdown as RichMarkdown
 
 from .config import SLEEPMATE_CONFIRMATION_WORDS
 
@@ -41,6 +43,14 @@ def get_confirmation_str():
 def display_markdown(text: str) -> None:
     """Display markdown in Jupyter Notebooks."""
     display(Markdown(text))
+
+
+def display_rich_markdown(text: str) -> None:
+    """Display markdown in console."""
+    markdown = RichMarkdown(text)
+
+    console = Console()
+    console.print(markdown)
 
 
 def set_attribute(attr_name, attr_value):

@@ -1,10 +1,9 @@
 from langchain.chains import LLMChain
-from langchain.chat_models import ChatOpenAI
 from langchain.memory import ConversationBufferMemory, ReadOnlySharedMemory
 from langchain.prompts import ChatPromptTemplate
 
 from .agent import BaseAgent
-from .config import SLEEPMATE_DEFAULT_MODEL_NAME, SLEEPMATE_SAMPLING_TEMPERATURE
+from .models import MODELS
 from .prompt import get_template
 
 
@@ -12,12 +11,9 @@ def get_completion(
     memory: ReadOnlySharedMemory,
     utterance: str,
     template: ChatPromptTemplate,
+    model_name: str = "gpt",
 ) -> str:
-    llm = ChatOpenAI(
-        model_name=SLEEPMATE_DEFAULT_MODEL_NAME,
-        temperature=SLEEPMATE_SAMPLING_TEMPERATURE,
-    )
-    chain = LLMChain(llm=llm, prompt=template, memory=memory)
+    chain = LLMChain(llm=MODELS[model_name], prompt=template, memory=memory)
     return chain.run(utterance)
 
 
@@ -34,10 +30,7 @@ def get_capabilities(x: BaseAgent, utterance: str) -> str:
 
 
 def get_greeting(x: BaseAgent, utterance: str) -> str:
-    """Use this when the human says hello. Greet them by name. Occasionally ask
-    them how they're feeling right now, in this moment. Remember that they might
-    be feeling tired so be sensitive.
-    """
+    """Use this when the human says hello. Greet them by name."""
     return get_completion(
         x.ro_memory, utterance, get_template(x.goal, x.db_user_id, get_greeting.__doc__)
     )

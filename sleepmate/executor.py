@@ -1,6 +1,6 @@
 import logging
 import warnings
-from typing import List
+from typing import Callable, List
 
 from langchain.agents import AgentExecutor, OpenAIFunctionsAgent
 from langchain.chat_models import ChatOpenAI
@@ -83,7 +83,7 @@ class X(BaseAgent):
         self,
         goal: str = "",
         audio: bool = False,
-        display: bool = True,
+        display_func: Callable[[str], None] = display_markdown,
         hello: str = "",
         add_user: bool = True,
         username: str = None,
@@ -110,7 +110,7 @@ class X(BaseAgent):
         assert set(self.goal_list).issubset(set(self.goals["GOAL_HANDLERS"].keys()))
 
         self.audio = audio
-        self.display = display
+        self.display_func = display_func
         self.add_user = add_user
         self.db_user_id = get_user_from_username(username).id if username else None
         self.goal_refused = False
@@ -197,8 +197,8 @@ class X(BaseAgent):
         # print(output)
         if self.audio:
             play(output)
-        if self.display:
-            display_markdown(output)
+        if self.display_func:
+            self.display_func(output)
         self.clear_old_goal_chat_history()
         return output
 

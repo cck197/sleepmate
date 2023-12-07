@@ -1,14 +1,14 @@
 import logging
 from datetime import datetime
-from typing import Callable, List, Tuple
+from typing import Callable, Dict, List, Tuple
 
 from langchain.chains import LLMChain
-from langchain.chat_models import ChatOpenAI
-from langchain.memory import ConversationBufferWindowMemory
 
 # kinda almost works with davinci
 # model_name = "text-davinci-003"
 # from langchain.llms import OpenAI
+from langchain.chat_models import ChatAnthropic, ChatOpenAI
+from langchain.memory import ConversationBufferWindowMemory
 from langchain.output_parsers import PydanticOutputParser
 from langchain.prompts import PromptTemplate
 from langchain.pydantic_v1 import BaseModel, Field
@@ -34,12 +34,39 @@ class SummaryResult(BaseModel):
     summary: str = Field(description="text summary")
 
 
+class TextCorrect(BaseModel):
+    correct: bool = Field(description="true if the text meets the constraints")
+
+
 def get_string_fields_with_values(document: Document) -> dict:
     return {
         field_name: getattr(document, field_name)
         for field_name, field_type in document._fields.items()
         if isinstance(field_type, StringField)
     }
+
+
+def get_text_correctness(query: str, text: str) -> TextCorrect:
+    parser = PydanticOutputParser(pydantic_object=TextCorrect)
+    prompt = PromptTemplate(
+        template="""
+            Does the text below surrounded by triple backticks {query}
+            ```{text}```
+            {format_instructions}
+            Output only a JSON object.
+            """,
+        input_variables=["query", "text"],
+        partial_variables={"format_instructions": parser.get_format_instructions()},
+    )
+    llm = ChatAnthropic()
+    chain = LLMChain(llm=llm, prompt=prompt)
+    output = chain(
+        {
+            "query": query,
+            "text": text,
+        }
+    )
+    return parser.parse(output["text"])
 
 
 def get_document_summary(query: str, document: Document) -> SummaryResult:

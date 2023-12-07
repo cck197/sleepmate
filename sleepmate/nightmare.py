@@ -118,8 +118,7 @@ dreams.
 - Explain that early on, nightmares might help to relive the experience
 and remember important details that might be meaningful to the human;
 the dreams might provide useful information for emotional processing,
-either spontaneously through dreaming, rapid eye movement sleep, or in
-collaboration with a therapist.
+either spontaneously through dreaming, rapid eye movement sleep.
 - If the dreams have been going on for a long time, explain it's
 questionable if they are still useful.
 - So if the dreams are no longer useful, why have they persisted so long?

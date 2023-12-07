@@ -32,6 +32,7 @@ class HealthHistory_(BaseModel):
     diet: str = Field(description="typical diet")
     medical_conditions: str = Field(description="existing medical conditions")
     medications: str = Field(description="current medications")
+    supplements: str = Field(description="current supplements")
     family_history: str = Field(description="family history of sleep disorders")
     mental_health: str = Field(description="history of mental health conditions")
     psychological_treatment: str = Field(description="current psychological treatment")
@@ -149,26 +150,27 @@ GOALS = [
         answers until the end.
         
         0. Date of entry (default to today's date)
-        3. Sex
-        4. Date of birth
-        5. Current Occupation
-        6. Typical work hours
-        7. Smoking
-        8. Alcohol
-        9. Physical Activity Level
-        10. What does a typical day of eating look like?
+        1. Sex
+        2. Date of birth
+        3. Current Occupation
+        4. Typical work hours
+        5. Smoking
+        6. Alcohol
+        7. Physical Activity Level
+        8. What does a typical day of eating look like?
         9. Any existing medical conditions (diabetes, hypertension, etc.)
         10. List of current medications
-        11. Family history of insomnia or other sleep disorders
-        12. History of mental health conditions (depression, anxiety, etc.)
-        13. Any current psychological treatment
-        14. Living with (Alone, Family, Friends)
-        15. Type of residence (House, Apartment, etc.)
-        16. Noise Level in the living area
-        17. When it comes to sleep, what does success look like?
-        18. What have you tried previously that helped?
-        19. What have you tried previously that didn't help?
-        20. Anything else you'd like to add?
+        11. List of current nutritional supplements
+        12. Family history of insomnia or other sleep disorders
+        13. History of mental health conditions (depression, anxiety, etc.)
+        14. Any current psychological treatment
+        15. Living with (Alone, Family, Friends)
+        16. Type of residence (House, Apartment, etc.)
+        17. Noise Level in the living area
+        18. When it comes to sleep, what does success look like?
+        19. What have you tried previously that helped?
+        20. What have you tried previously that didn't help?
+        21. Anything else you'd like to add?
 
         Once you have ALL the answers to the above, save the Health History to
         the database. Retrieve the last Health History entry from the database

@@ -69,7 +69,7 @@ GOALS = [
         "meet": f"""
         Greet the human then ask the following questions:
         - What is your name?
-        - What is your email address? (so that we can be in contact offline)
+        - What is your email address? (don't worry, I won't spam you)
         - Confirm that the name and email address are correct.
          
         Only once they confirm by saying something like

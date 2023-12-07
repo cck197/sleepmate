@@ -132,7 +132,7 @@ def sum_category(db_entry: DBSleep50Entry, category: str) -> int:
 
 def get_sleep50_entry_from_memory(x: BaseAgent) -> Sleep50Entry:
     return get_parsed_output(
-        "summarise the last SLEEP-50 entry",
+        "summarise the last SleepHistory entry",
         x.get_latest_messages,
         Sleep50Entry,
     )
@@ -147,13 +147,13 @@ def save_sleep50_entry_to_db(user: str, entry: Sleep50Entry) -> DBSleep50Entry:
 
 
 def get_json_sleep50_entry(entry: dict) -> str:
-    """Returns the SLEEP-50 entry in JSON format."""
+    """Returns the SleepHistory entry in JSON format."""
     return mongo_to_json(entry)
 
 
 @set_attribute("return_direct", False)
 def save_sleep50_entry(x: BaseAgent, utterance: str):
-    """Saves the SLEEP-50 entry to the database. Call *only* after all 50
+    """Saves the SleepHistory entry to the database. Call *only* after all 50
     questions have been answered."""
     entry = get_sleep50_entry_from_memory(x)
     if entry is not None:
@@ -162,16 +162,16 @@ def save_sleep50_entry(x: BaseAgent, utterance: str):
 
 
 def get_last_sleep50_entry_from_db(db_user_id: str) -> DBSleep50Entry:
-    """Returns the last SLEEP-50 entry from the database."""
+    """Returns the last SleepHistory entry from the database."""
     return DBSleep50Entry.objects(user=db_user_id).order_by("-id").first()
 
 
 @set_attribute("return_direct", False)
 def get_last_sleep50_entry(x: BaseAgent, utterance: str):
-    """Returns the last SLEEP-50 entry."""
+    """Returns the last SleepHistory entry."""
     db_entry = get_last_sleep50_entry_from_db(x.db_user_id)
     if db_entry is None:
-        return "No SLEEP-50 entries found"
+        return "No SleepHistory entries found"
     entry = db_entry.to_mongo().to_dict()
     log.info(f"get_last_sleep50_entry {entry=}")
     return get_json_sleep50_entry(entry)
@@ -179,7 +179,7 @@ def get_last_sleep50_entry(x: BaseAgent, utterance: str):
 
 @set_attribute("return_direct", False)
 def get_date_sleep50_diary_entry(x: BaseAgent, utterance: str):
-    """Returns the SLEEP-50 entry for a given date."""
+    """Returns the SleepHistory entry for a given date."""
     date = parse_date(utterance)
     db_entry = DBSleep50Entry.objects(user=x.db_user_id, date=date).first()
     if db_entry is None:
@@ -189,7 +189,7 @@ def get_date_sleep50_diary_entry(x: BaseAgent, utterance: str):
 
 @set_attribute("return_direct", False)
 def get_sleep50_dates(x: BaseAgent, utterance: str):
-    """Returns the dates of all SLEEP-50 entries in JSON format.
+    """Returns the dates of all SleepHistory entries in JSON format.
     Call with exactly one argument."""
     return json_dumps([e.date for e in DBSleep50Entry.objects(user=x.db_user_id)])
 
@@ -209,14 +209,10 @@ GOAL_HANDLERS = [
 GOALS = [
     {
         "sleep50": """
-        Your goal is to survey the human using the standard SLEEP-50 using the
-        standard 50-item questionnaire. Ask if now would be a good time then ask the
-        following questions. Get today's date and display it. Step through the
-        questionnaire one section at a time, starting with Sleep Apnea. Show
-        progress as you go step N of 10.
-        
-        The SLEEP-50 is a well-validated questionnaire able to detect a variety
-        of sleep disorders.
+        Your goal is to survey the human using the questionnaire below. Ask if
+        now would be a good time then ask the following questions. Get today's
+        date and display it. Step through the questionnaire one section at a
+        time, starting with Sleep Apnea. Show progress as you go step N of 10.
         
         Please respond to what extent a statement (item) has been applicable to
         you during the past 4 weeks. Each item is scored on a 4-point-scale: 1
@@ -300,7 +296,7 @@ GOALS = [
         questions and answers in a numbered list including the date. Ask if
         they're correct.
         
-        Only once the human has confirmed correctness, save the SLEEP-50 entry
+        Only once the human has confirmed correctness, save the SleepHistory entry
         to the database.
         """
     },

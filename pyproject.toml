@@ -10,10 +10,20 @@ packages = [{include = "sleepmate"}]
 [tool.poetry.group.local.dependencies]
 whoop-client = { path = "./whoop_client" }
 
+[tool.pytest.ini_options]
+norecursedirs = ["whoop_client"]
+log_cli = true
+log_cli_level = "INFO"
+log_cli_format = "%(asctime)s %(levelname)s %(name)s %(message)s"
+log_cli_date_format = "%Y-%m-%d %H:%M:%S"
+filterwarnings = [
+    "ignore::DeprecationWarning"
+]
+
 [tool.poetry.dependencies]
 python = "^3.11"
 openai = "^0.28.1"
-langchain = "^0.0.331"
+langchain = "^0.0.346"
 tiktoken = "^0.5.1"
 pypdfium2 = "^4.20.0"
 elevenlabs = "^0.2.26"
@@ -29,12 +39,16 @@ flask = "^3.0.0"
 gunicorn = "^21.2.0"
 authlib = "^1.2.1"
 twilio = "^8.10.1"
+anthropic = "^0.7.7"
+rich = "^13.7.0"
 
 [tool.poetry.group.dev.dependencies]
 ipython = "^8.15.0"
 google-api-python-client = "^2.102.0"
 ipywidgets = "^8.1.1"
 jupyterlab = "^4.0.7"
+pytest = "^7.4.3"
+pytest-dependency = "^0.5.1"
 
 [build-system]
 requires = ["poetry-core"]
