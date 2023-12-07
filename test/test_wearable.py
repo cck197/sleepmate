@@ -1,6 +1,9 @@
+import json
+
 import pytest
 
 from sleepmate.structured import get_text_correctness
+from sleepmate.wearable import get_wearables
 
 
 @pytest.mark.usefixtures("x", "test_name")
@@ -16,9 +19,26 @@ class TestWearable:
         )
         assert result.correct
 
-    @pytest.mark.dependency(
-        depends=["TestWearable::test_should_greet_new_user_with_wearable_question"]
-    )
-    def test_should_skip_correctly(self, x):
-        llm_output = x("none of the above")
-        assert llm_output
+
+# class TestWearableSkip(TestWearable):
+#     def test_should_skip_correctly(self, x):
+#         x("none of the above")
+#         wearables = json.loads(get_wearables(x, ""))
+#         print(wearables)
+#         for val in wearables.values():
+#             if isinstance(val, bool):
+#                 assert not val
+#
+#
+# class TestWearableWhoop(TestWearable):
+#     @pytest.mark.dependency(
+#         depends=["TestWearable::test_should_greet_new_user_with_wearable_question"]
+#     )
+#     def test_should_be_able_to_add_whoop(self, x):
+#         x("I have a WHOOP strap")
+#         wearables = json.loads(get_wearables(x, ""))
+#         whoop = wearables.pop("whoop")
+#         assert whoop
+#         for val in wearables.values():
+#             if isinstance(val, bool):
+#                 assert not val
