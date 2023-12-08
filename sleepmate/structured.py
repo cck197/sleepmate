@@ -46,6 +46,38 @@ def get_string_fields_with_values(document: Document) -> dict:
     }
 
 
+def get_delimited_json(text: str, delim="```") -> str:
+    bits = text.split(delim)
+    if len(bits) >= 2:
+        text = bits[1]
+    return text
+
+
+def get_objects_approximately_equal(obj1: str, obj2: str) -> TextCorrect:
+    parser = PydanticOutputParser(pydantic_object=TextCorrect)
+    prompt = PromptTemplate(
+        template="""
+            Are the two JSON objects delimited by triple backticks approximately equal?
+            ```{obj1}```
+            ```{obj2}```
+            {format_instructions}
+            Output only a JSON object.
+            """,
+        input_variables=["obj1", "obj2"],
+        partial_variables={"format_instructions": parser.get_format_instructions()},
+    )
+    llm = ChatAnthropic()
+    chain = LLMChain(llm=llm, prompt=prompt)
+    output = chain(
+        {
+            "obj1": obj1,
+            "obj2": obj2,
+        }
+    )
+    text = get_delimited_json(output["text"])
+    return parser.parse(text)
+
+
 def get_text_correctness(query: str, text: str) -> TextCorrect:
     parser = PydanticOutputParser(pydantic_object=TextCorrect)
     prompt = PromptTemplate(
@@ -66,10 +98,7 @@ def get_text_correctness(query: str, text: str) -> TextCorrect:
             "text": text,
         }
     )
-    text = output["text"]
-    bits = text.split("```")
-    if len(bits) >= 2:
-        text = bits[1]
+    text = get_delimited_json(output["text"])
     return parser.parse(text)
 
 

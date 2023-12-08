@@ -1,6 +1,7 @@
 import pytest
 
-from sleepmate.structured import get_text_correctness
+from sleepmate.helpful_scripts import json_dumps
+from sleepmate.structured import get_objects_approximately_equal, get_text_correctness
 
 
 @pytest.fixture
@@ -37,3 +38,15 @@ def test_should_be_able_to_check_correct_llm_output(llm_output):
         llm_output,
     )
     assert result.correct
+
+
+def test_should_be_able_to_check_json_objects_correct():
+    a = json_dumps({"a": 1, "b": 2})
+    b = json_dumps({"b": 2, "a": 1})
+    assert get_objects_approximately_equal(a, b).correct
+
+
+def test_should_be_able_to_check_json_objects_incorrect():
+    a = json_dumps({"apple": 10, "banana": 200})
+    b = json_dumps({"b": 2, "a": 1})
+    assert get_objects_approximately_equal(a, b).correct == False

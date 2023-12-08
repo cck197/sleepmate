@@ -9,6 +9,7 @@ def get_X(user, goal):
         username=user.username,
         hello=None,
         goal=goal,
+        fixed_goal=True,
         display_func=display_rich_markdown,
         log_=logging.getLogger("sleepmate.executor"),
     )

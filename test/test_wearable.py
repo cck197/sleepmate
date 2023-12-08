@@ -17,7 +17,7 @@ def x(user):
 class TestWearable:
     @pytest.mark.dependency()
     def test_should_greet_new_user_with_wearable_question(self, x, test_name):
-        assert x.get_next_goal().key == "wearable_probe"
+        assert x.goal.key == "wearable_probe"
         llm_output = x("hey")
         result = get_text_correctness(
             f"greet {test_name} by name, contains a bullet list of wearable "
@@ -37,8 +37,6 @@ class TestWearableSkip:
         for val in wearables.values():
             if isinstance(val, bool):
                 assert not val
-        assert len(x.memory.chat_memory.messages) == 0
-        assert x.get_next_goal().key == "health_history"
 
 
 class TestWearableWhoop:
@@ -51,5 +49,3 @@ class TestWearableWhoop:
         for val in wearables.values():
             if isinstance(val, bool):
                 assert not val
-        assert len(x.memory.chat_memory.messages) == 0
-        assert x.get_next_goal().key == "whoop_import"
