@@ -66,7 +66,11 @@ def get_text_correctness(query: str, text: str) -> TextCorrect:
             "text": text,
         }
     )
-    return parser.parse(output["text"])
+    text = output["text"]
+    bits = text.split("```")
+    if len(bits) >= 2:
+        text = bits[1]
+    return parser.parse(text)
 
 
 def get_document_summary(query: str, document: Document) -> SummaryResult:
