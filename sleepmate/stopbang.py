@@ -5,6 +5,7 @@ from langchain.pydantic_v1 import BaseModel, Field, validator
 from mongoengine import ReferenceField
 
 from .agent import BaseAgent
+from .bmi import calculate_bmi
 from .goal import goal_refused
 from .helpful_scripts import (
     get_date_fields,
@@ -12,6 +13,7 @@ from .helpful_scripts import (
     mongo_to_json,
     set_attribute,
 )
+from .history import calculate_age_in_years, get_is_hypertensive, get_is_male
 from .sleep50 import get_last_sleep50_entry_from_db, sum_category
 from .structured import fix_schema, get_parsed_output, pydantic_to_mongoengine
 from .user import DBUser
@@ -24,9 +26,7 @@ class StopBang_(BaseModel):
     snoring: bool = Field(description="snores loudly")
     tired: bool = Field(description="tired during the day")
     observed: bool = Field(description="observed to stop breathing")
-    pressure: bool = Field(description="high blood pressure")
     neck: float = Field(description="neck circumference")
-    score: int = Field(description="STOP-Bang score")
 
 
 date_fields = get_date_fields(StopBang_)
@@ -105,6 +105,39 @@ def stop_bang(db_user_id: str):
     return DBStopBang.objects(user=db_user_id).count() == 0
 
 
+@set_attribute("return_direct", False)
+def calculate_stop_bang(x: BaseAgent, utterance: str):
+    """Use this to calculate the STOP-Bang score."""
+    stop_bang = DBStopBang.objects(user=x.db_user_id).order_by("-id").first()
+    if stop_bang is None:
+        return "No StopBang found"
+    male = get_is_male(x, "")
+    bmi = calculate_bmi(x, "")
+    age = calculate_age_in_years(x, "")
+    hypertension = get_is_hypertensive(x, "")
+    score = 0
+    log.info(
+        f"{stop_bang.to_mongo().to_dict()=}, {male=}, {bmi=}, {age=}, {hypertension=}"
+    )
+    if stop_bang.snoring:
+        score += 1
+    if stop_bang.tired:
+        score += 1
+    if stop_bang.observed:
+        score += 1
+    if hypertension:
+        score += 1
+    if bmi > 35:
+        score += 1
+    if age > 50:
+        score += 1
+    if stop_bang.neck > 40:
+        score += 1
+    if male:
+        score += 1
+    return score
+
+
 GOAL_HANDLERS = [
     {
         "stop_bang": stop_bang,
@@ -126,31 +159,31 @@ GOALS = [
 
         Steps:
         - Ask if now is a good time to complete the STOP-Bang Questionnaire.
-        - Get the Health History database entry
-        - Calculate the age in years
-        - Calculate the BMI
+        - Get the Health History database entry by calling `get_last_health_history`
+        - Get the height and weight by calling `get_last_body_measures`
+        - Calculate the age in years by calling `calculate_age_in_years`
+        - Calculate the BMI by calling `calculate_bmi`
         - Summarise the sex, age, height, weight, medical conditions and BMI
         - Ask the following questions:
             - (S) Do you snore loudly (louder than talking or loud enough to be heard
-            through closed doors)?
+            through closed doors)? (+1 point)
             - (T) Do you often feel tired, fatigued, or sleepy during daytime?
-            - (O) Has anyone observed you stop breathing during your sleep?
+            - (O) Has anyone observed you stop breathing during your sleep? (+1 point)
         - Summarise from the Health History and BMI:
             - (P) High blood pressure if hypertension or high blood pressure in
-            medical_conditions
-            - (B) BMI > 35 kg/m2
-            - (A) Calculated age > 50 years (think step by step)
+            medical_conditions (+1 point)
+            - (B) BMI > 35 kg/m2 (+1 point)
+            - (A) Calculated age > 50 years (think step by step) (+1 point)
         - Ask:
             - (N) What is your neck circumference (convert to cm if necessary)?
         - Summarise from the Health History:
-            - (G) Gender male
-        - Calculate the STOP-Bang score (think step by step)
+            - (G) Gender male (+1 point)
+        - Important! Save the StopBang entry to the database
+        - Calculate the STOP-Bang score by calling `calculate_stop_bang`
         - Summarise the STOP-Bang entry in order
         - Explain the risk
-        - Ask the human to confirm the STOP-Bang entry
-        - Important! Save the StopBang entry to the database
         """,
     },
 ]
 
-TOOLS = [get_last_stop_bang, save_stop_bang]
+TOOLS = [get_last_stop_bang, save_stop_bang, calculate_stop_bang]

@@ -3,9 +3,10 @@ from datetime import datetime
 import pytest
 
 from sleepmate.bmi import DBBodyMeasures
-from sleepmate.helpful_scripts import json_dumps, json_loads
+from sleepmate.helpful_scripts import json_loads
 from sleepmate.history import DBHealthHistory
-from sleepmate.structured import get_objects_approximately_equal, get_text_correctness
+from sleepmate.stopbang import calculate_stop_bang, get_last_stop_bang
+from sleepmate.structured import get_text_correctness
 
 from .helpful_scripts import get_X
 
@@ -58,5 +59,19 @@ class TestStopBang:
         assert result.correct
         x(
             "I snore loudly, am tired during the day, I haven't been "
-            "observed not breathing, my neck is 15 inches"
+            "observed not breathing, my neck is 38cm"
         )
+        x("that's right")
+        stop_bang = json_loads(get_last_stop_bang(x, ""))
+        score = calculate_stop_bang(x, "")
+        print(f"{stop_bang=}")
+        date = stop_bang.pop("date")
+        assert date is not None
+        check_object = {
+            "snoring": True,
+            "tired": True,
+            "observed": False,
+            "neck": 38.0,
+        }
+        assert stop_bang == check_object
+        assert score == 4

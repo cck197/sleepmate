@@ -14,7 +14,12 @@ from .helpful_scripts import (
     set_attribute,
     timedelta_in_years,
 )
-from .structured import fix_schema, get_parsed_output, pydantic_to_mongoengine
+from .structured import (
+    fix_schema,
+    get_document_summary,
+    get_parsed_output,
+    pydantic_to_mongoengine,
+)
 from .user import DBUser
 
 log = logging.getLogger(__name__)
@@ -126,6 +131,26 @@ def get_last_health_history(x: BaseAgent, utterance: str):
     return get_json_health_history(entry)
 
 
+@set_attribute("return_direct", False)
+def get_is_male(x: BaseAgent, utterance: str):
+    entry = DBHealthHistory.objects(user=x.db_user_id).order_by("-id").first()
+    if entry is None:
+        return "No Health History found"
+    sex = entry.sex.lower()
+    return "male" in sex or "man" in sex
+
+
+@set_attribute("return_direct", False)
+def get_is_hypertensive(x: BaseAgent, utterance: str):
+    """Use this to determine if the human is hypertensive."""
+    db_entry = DBHealthHistory.objects(user=x.db_user_id).order_by("-id").first()
+    if db_entry is None:
+        return "No Health History found"
+    summary = get_document_summary("hypertension or high blood pressure", db_entry)
+    log.info(f"{summary=}")
+    return summary.found
+
+
 def health_history(db_user_id: str):
     """Returns True if a Health History should happen."""
     if goal_refused(db_user_id, "health_history"):
@@ -179,4 +204,9 @@ GOALS = [
     }
 ]
 
-TOOLS = [get_last_health_history, save_health_history, calculate_age_in_years]
+TOOLS = [
+    get_last_health_history,
+    save_health_history,
+    calculate_age_in_years,
+    get_is_hypertensive,
+]

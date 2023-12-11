@@ -1,8 +1,8 @@
 import pytest
 
-from sleepmate.helpful_scripts import json_dumps, json_loads
+from sleepmate.helpful_scripts import json_loads
 from sleepmate.sleep50 import get_last_sleep50_entry
-from sleepmate.structured import get_objects_approximately_equal, get_text_correctness
+from sleepmate.structured import get_text_correctness
 
 from .helpful_scripts import get_X
 
