@@ -172,6 +172,7 @@ class X(BaseAgent):
     def proceed(self, utterance: str = "") -> Goal:
         """Returns the next goal. If the goal has changed, then the agent is
         reset."""
+        log.info(f"proceed: {utterance=}")
         self.goal_refused = False
         goal = self.get_next_goal()
         if goal != self.goal:

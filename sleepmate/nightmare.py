@@ -111,7 +111,7 @@ GOAL_HANDLERS = [
 
 IRT_PROMPT = """
 Your goal is to help the human with nightmares or frightening dreams
-using Imagery Rehearsal Therapy. Steps:
+using Imagery Rehearsal Therapy. Steps (follow them all):
 - Ask the human if now is a good time to talk about their unpleasant
 dreams.
 - Ask them how long they have been having the dreams.
