@@ -67,6 +67,10 @@ def json_dumps(d: object) -> str:
     )
 
 
+def json_loads(s: str) -> object:
+    return json.loads(s)
+
+
 def mongo_to_json(entry: dict) -> str:
     for k in ("_id", "user"):
         entry.pop(k, None)

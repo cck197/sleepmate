@@ -3,6 +3,9 @@ import warnings
 from typing import Callable, List
 
 from langchain.agents import AgentExecutor, OpenAIFunctionsAgent
+from langchain.callbacks.streaming_stdout_final_only import (
+    FinalStreamingStdOutCallbackHandler,
+)
 from langchain.chat_models import ChatOpenAI
 from langchain.memory import (
     ConversationBufferWindowMemory,
@@ -145,7 +148,12 @@ class X(BaseAgent):
 
     def set_agent(self):
         agent = OpenAIFunctionsAgent(
-            llm=ChatOpenAI(temperature=0, model=SLEEPMATE_AGENT_MODEL_NAME),
+            llm=ChatOpenAI(
+                temperature=0,
+                model=SLEEPMATE_AGENT_MODEL_NAME,
+                callbacks=[FinalStreamingStdOutCallbackHandler()],
+                streaming=True,
+            ),
             tools=get_tools(self),
             prompt=self.get_agent_prompt(),
         )

@@ -132,7 +132,7 @@ def sum_category(db_entry: DBSleep50Entry, category: str) -> int:
 
 def get_sleep50_entry_from_memory(x: BaseAgent) -> Sleep50Entry:
     return get_parsed_output(
-        "summarise the last SleepHistory entry",
+        "summarise the last sleep history entry",
         x.get_latest_messages,
         Sleep50Entry,
     )
@@ -147,13 +147,13 @@ def save_sleep50_entry_to_db(user: str, entry: Sleep50Entry) -> DBSleep50Entry:
 
 
 def get_json_sleep50_entry(entry: dict) -> str:
-    """Returns the SleepHistory entry in JSON format."""
+    """Returns the sleep history entry in JSON format."""
     return mongo_to_json(entry)
 
 
 @set_attribute("return_direct", False)
 def save_sleep50_entry(x: BaseAgent, utterance: str):
-    """Saves the SleepHistory entry to the database. Call *only* after all 50
+    """Saves the sleep history entry to the database. Call *only* after all 50
     questions have been answered."""
     entry = get_sleep50_entry_from_memory(x)
     if entry is not None:
@@ -162,16 +162,16 @@ def save_sleep50_entry(x: BaseAgent, utterance: str):
 
 
 def get_last_sleep50_entry_from_db(db_user_id: str) -> DBSleep50Entry:
-    """Returns the last SleepHistory entry from the database."""
+    """Returns the last sleep history entry from the database."""
     return DBSleep50Entry.objects(user=db_user_id).order_by("-id").first()
 
 
 @set_attribute("return_direct", False)
 def get_last_sleep50_entry(x: BaseAgent, utterance: str):
-    """Returns the last SleepHistory entry."""
+    """Returns the last sleep history entry."""
     db_entry = get_last_sleep50_entry_from_db(x.db_user_id)
     if db_entry is None:
-        return "No SleepHistory entries found"
+        return "No sleep history entries found"
     entry = db_entry.to_mongo().to_dict()
     log.info(f"get_last_sleep50_entry {entry=}")
     return get_json_sleep50_entry(entry)
@@ -179,7 +179,7 @@ def get_last_sleep50_entry(x: BaseAgent, utterance: str):
 
 @set_attribute("return_direct", False)
 def get_date_sleep50_diary_entry(x: BaseAgent, utterance: str):
-    """Returns the SleepHistory entry for a given date."""
+    """Returns the sleep history entry for a given date."""
     date = parse_date(utterance)
     db_entry = DBSleep50Entry.objects(user=x.db_user_id, date=date).first()
     if db_entry is None:
@@ -189,7 +189,7 @@ def get_date_sleep50_diary_entry(x: BaseAgent, utterance: str):
 
 @set_attribute("return_direct", False)
 def get_sleep50_dates(x: BaseAgent, utterance: str):
-    """Returns the dates of all SleepHistory entries in JSON format.
+    """Returns the dates of all sleep history entries in JSON format.
     Call with exactly one argument."""
     return json_dumps([e.date for e in DBSleep50Entry.objects(user=x.db_user_id)])
 
@@ -259,23 +259,24 @@ GOALS = [
         Sleepwalking
         1. I sometimes walk when I am sleeping.
         2. I sometimes wake up in a different place than where I fell asleep.
-        3. I sometimes find evidence of having performed an action during the night I
-        do not remember.
+        3. I sometimes find evidence of having performed an action during the
+        night I do not remember.
         
         Nightmares
         1. I have frightening dreams.
         2. I wake up from these dreams.
         3. I remember the content of these dreams.
         4. I can orientate quickly after these dreams.
-        5. I have physical symptoms during or after these dreams (e.g., movements,
-        sweating, heart palpitations, shortness of breath).
+        5. I have physical symptoms during or after these dreams (e.g.,
+        movements, sweating, heart palpitations, shortness of breath).
 
         Factors Influencing Sleep
         1. It is too light in my bedroom during the night.
         2. It is too noisy in my bedroom during the night.
         3. I drink alcoholic beverages during the evening.
         4. I smoke during the evening.
-        5. I use other substances during the evening (e.g., sleep or other medication).
+        5. I use other substances during the evening (e.g., sleep or other
+        medication).
         6. I feel sad.
         7. I have no pleasure or interest in daily occupations.
 
@@ -296,8 +297,8 @@ GOALS = [
         questions and answers in a numbered list including the date. Ask if
         they're correct.
         
-        Only once the human has confirmed correctness, save the SleepHistory entry
-        to the database.
+        Only once the human has confirmed correctness, save the sleep history
+        entry to the database.
         """
     },
 ]
