@@ -196,17 +196,19 @@ which may strengthen their hold over your mind and wake you up.
 """
 
 EXERCISE_CONFIRMATION = f"""
-Ask if now is a good time to perform the exercise. Note the irony of using a
+Steps (go slow, don't skip any steps):
+-  Ask if now is a good time to perform the exercise. Note the irony of using a
 digital device for this purpose, mentioning that this system has built-in
-obsolescence. Once they confirm by saying something like
-{get_confirmation_str()}, guide them through one step at a time.  Don't give all
-the steps at once. Wait for them to complete each step. When the human completed
-the exercise, ask how they're feeling. Summarise with the following fields:
-
-- name of the exercise
-- how the human was feeling before and after the exercise
-
-Finally, after the summary, save the record of exercise to the database.
+obsolescence.
+- Guide them through the exercise one step at a time.  Don't give all
+the steps at once. Wait for them to complete each step.
+- When the human completed the exercise, ask how they're feeling.
+- Summarise with the following fields:
+- Name of the exercise
+- How the human was feeling before and after the exercise
+- Confirm the summary is correct.
+- Save the exercise entry to the database by calling the function
+`save_exercise_entry`.
 """
 
 

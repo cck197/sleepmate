@@ -1,4 +1,4 @@
-import json
+import logging
 
 import pytest
 
@@ -8,16 +8,13 @@ from sleepmate.structured import get_objects_approximately_equal, get_text_corre
 
 from .helpful_scripts import get_X
 
-
-@pytest.fixture(scope="class")
-def x(user):
-    return get_X(user, "health_history")
+log = logging.getLogger(__name__)
 
 
-@pytest.mark.usefixtures("x", "test_name")
+@pytest.mark.usefixtures("user", "test_name")
 class TestHealthHistory:
-    @pytest.mark.dependency()
-    def test_should_save_health_history(self, x, test_name):
+    def test_should_save_health_history(self, user, test_name):
+        x = get_X(user, "health_history")
         assert x.goal.key == "health_history"
         llm_output = x("hey")
         result = get_text_correctness(
@@ -51,7 +48,7 @@ class TestHealthHistory:
             that's all"""
         )
         history = get_last_health_history(x, "")
-        print(f"{history=}")
+        log.info(f"{history=}")
         check_object = {
             "date": "2023-04-06T00:00:00",
             "sex": "man",

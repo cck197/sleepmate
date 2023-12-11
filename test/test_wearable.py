@@ -1,4 +1,5 @@
 import json
+import logging
 
 import pytest
 
@@ -6,6 +7,8 @@ from sleepmate.structured import get_text_correctness
 from sleepmate.wearable import get_wearables
 
 from .helpful_scripts import get_X
+
+log = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="class")
@@ -33,12 +36,13 @@ class TestWearableSkip:
         x("hey")
         x("none of the above")
         wearables = json.loads(get_wearables(x, ""))
-        print(wearables)
+        log.info(f"{wearables=}")
         for val in wearables.values():
             if isinstance(val, bool):
                 assert not val
 
 
+@pytest.mark.usefixtures("x")
 class TestWearableWhoop:
     def test_should_be_able_to_add_whoop(self, x):
         x("hey")

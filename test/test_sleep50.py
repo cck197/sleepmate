@@ -1,3 +1,5 @@
+import logging
+
 import pytest
 
 from sleepmate.helpful_scripts import json_loads
@@ -6,16 +8,13 @@ from sleepmate.structured import get_text_correctness
 
 from .helpful_scripts import get_X
 
-
-@pytest.fixture(scope="class")
-def x(user):
-    return get_X(user, "sleep50")
+log = logging.getLogger(__name__)
 
 
-@pytest.mark.usefixtures("x", "test_name")
+@pytest.mark.usefixtures("user", "test_name")
 class TestSleep50:
-    @pytest.mark.dependency()
-    def test_should_save_sleep50(self, x, test_name):
+    def test_should_save_sleep50(self, user, test_name):
+        x = get_X(user, "sleep50")
         assert x.goal.key == "sleep50"
         llm_output = x("hey")
         result = get_text_correctness(
@@ -40,7 +39,7 @@ class TestSleep50:
         x("I rate my sleep as 5 and I sleep 6 hours from 10pm to 4am")
         x("that's right")
         sleep50 = json_loads(get_last_sleep50_entry(x, ""))
-        print(f"{sleep50=}")
+        log.info(f"{sleep50=}")
         date = sleep50.pop("date", None)
         assert date is not None
         check_object = {
