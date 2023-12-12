@@ -75,7 +75,7 @@ def get_current_stress_audit(db_user_id: str) -> DBStressAudit:
 def get_stress_audit(x: BaseAgent, utterance: str):
     """Returns Stress Audit from the database."""
     entry = get_current_stress_audit(x.db_user_id)
-    log.info(f"get_stress_audit {entry=}")
+    log.info(f"get_stress_audit {entry.to_mongo().to_dict()=}")
     if entry is not None:
         return get_json_stress_audit(entry.to_mongo().to_dict())
 
