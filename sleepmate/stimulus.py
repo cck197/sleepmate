@@ -67,19 +67,19 @@ GOALS = [
     {
         "stimulus_control": """
         Your goal is to ask the human what they do in bed other than sleep.
-        
-        Only if they say they do anything other than sleep, ask them if they're
-        open to hearing about Stimulus Control Therapy as described by Richard
-        R. Bootzin.
-        
-        Summarise the rationale for the therapy and the instructions for
-        implementing it. Ask them if they're willing to try it.
 
-        Always record a record of them having seen Stimulus Control Therapy in
-        the database.
-        
-        If they agree to try it, explain you'll help them get it done using the
-        SEEDS exercise later.
+        Steps:
+        - Ask them what they do in bed other than sleep.
+        - Only if they say they do anything other than sleep, ask them if
+        they're open to hearing about Stimulus Control Therapy as described by
+        Richard R. Bootzin.
+        - If they agree, summarise the rationale for the therapy and the
+        instructions for implementing it. Ask them if they're willing to try it.
+        - Important! Record a record of them having seen Stimulus Control
+        Therapy in the database by calling the function
+        `save_stimulus_control_seen`.
+        - If they agreed to try it, explain you'll help them get it done using
+        the SEEDS exercise later.
         """
     }
 ]
