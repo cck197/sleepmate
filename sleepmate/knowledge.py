@@ -62,6 +62,10 @@ def save_daily_routine_seen_to_db(
     return DBDailyRoutineSeen(**{"user": db_user_id, **entry}).save()
 
 
+def add_documents_to_knowledge(filepath: Path) -> None:
+    loader_cls = loader_map.get(filepath.suffix)
+
+
 @set_attribute("return_direct", False)
 def get_daily_routine_seen(x: BaseAgent, utterance: str):
     """Returns True if the human has already seen the daily routine."""
