@@ -62,6 +62,8 @@ DISCOURSE_BASE_URL = os.environ.get(
 )
 DISCOURSE_API_KEY = os.environ.get("DISCOURSE_API_KEY")
 
+ELEVEN_VOICE_ID = os.environ.get("ELEVEN_VOICE_ID")
+
 SLEEPMATE_CONFIRMATION_WORDS = [
     "k",
     "okay",
