@@ -7,6 +7,7 @@ WORKDIR /app
 COPY . .
 
 RUN pip install -r requirements.txt
+RUN pip install -e .
 
 RUN cd whoop_client && python setup.py bdist_wheel
 RUN pip install whoop_client/dist/whoop_client-1.0.0-py3-none-any.whl
