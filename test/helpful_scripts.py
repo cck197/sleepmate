@@ -13,3 +13,9 @@ def get_X(user, goal):
         display_func=display_rich_markdown,
         log_=logging.getLogger("sleepmate.executor"),
     )
+
+
+x(
+    "who or what do you believe if the device says that you slept well but you "
+    "know you slept like crap? it's sleep-state misperception or paradoxical insomnia"
+)

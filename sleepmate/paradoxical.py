@@ -13,7 +13,7 @@ def explain_paradoxical_insomnia(x: BaseAgent, utterance: str):
     return get_completion(
         x.ro_memory,
         utterance,
-        get_template(x.goal, x.db_user_id, GOALS[0]["paradoxical_insomnia"]),
+        get_template(x, GOALS[0]["paradoxical_insomnia"]),
     )
 
 

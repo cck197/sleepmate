@@ -233,18 +233,12 @@ GOALS = [
 
 
 def get_sleep_diary_description(x: BaseAgent, utterance: str) -> str:
-    """Use this when the human asks what a sleep diary is. Summarise the
-    numbered list of questions only. Call with exactly one string argument."""
+    """Use this when the human asks what a sleep diary is. They're asking about
+    the Consensus Sleep Diary so describe that."""
     return get_completion(
         x.ro_memory,
         utterance,
-        get_template(
-            x.goal,
-            x.db_user_id,
-            get_sleep_diary_description.__doc__
-            + GOALS[1]["diary_entry"]
-            + "End by asking if they'd like the AI to help them keep a sleep diary.",
-        ),
+        get_template(x, get_sleep_diary_description.__doc__),
     )
 
 

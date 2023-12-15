@@ -13,6 +13,7 @@ from langchain.prompts import (
 from langchain.schema import AgentAction, BaseMessage, HumanMessage
 from langchain.tools import BaseTool, Tool
 
+from .agent import BaseAgent
 from .config import SLEEPMATE_STOP_SEQUENCE, SLEEPMATE_SYSTEM_DESCRIPTION
 from .helpful_scripts import Goal, json_dumps, set_attribute, strip_all_whitespace
 from .user import get_user_from_id
@@ -84,14 +85,13 @@ def get_tools(x: object) -> list[Tool]:
 
 
 def get_system_prompt(
-    goal: Goal,
-    db_user,
+    x: BaseAgent,
     stop_sequence: str = SLEEPMATE_STOP_SEQUENCE,
 ) -> str:
     system = SLEEPMATE_SYSTEM_DESCRIPTION
-    if goal is not None:
+    if not x.fixed_goal and x.goal is not None:
         system = (
-            f"{system}{goal.description}"
+            f"{system}{x.goal.description}"
             "Very important! Don't ask the human how you can assist them. "
             "Instead, get to the goal as quickly as possible."
         )
@@ -105,7 +105,8 @@ def get_system_prompt(
             f"{system} When the goal is achieved, ask the human to say hey to "
             "let you know when they're ready to continue on their health journey."
         )
-    if db_user is not None:
+    if x.db_user_id is not None:
+        db_user = get_user_from_id(x.db_user_id)
         system = (
             f"{system} The human's name is '{db_user.name}'"
             f", and their email is <{db_user.email}>"
@@ -113,9 +114,8 @@ def get_system_prompt(
     return strip_all_whitespace(system)
 
 
-def get_template(goal: Goal, db_user_id: str, prompt: str) -> ChatPromptTemplate:
-    db_user = get_user_from_id(db_user_id)
-    system = get_system_prompt(goal, db_user)
+def get_template(x: BaseAgent, prompt: str) -> ChatPromptTemplate:
+    system = get_system_prompt(x)
     prompt_ = strip_all_whitespace(system + prompt)
     return ChatPromptTemplate(
         messages=[

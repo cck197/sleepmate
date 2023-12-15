@@ -62,10 +62,6 @@ def save_daily_routine_seen_to_db(
     return DBDailyRoutineSeen(**{"user": db_user_id, **entry}).save()
 
 
-def add_documents_to_knowledge(filepath: Path) -> None:
-    loader_cls = loader_map.get(filepath.suffix)
-
-
 @set_attribute("return_direct", False)
 def get_daily_routine_seen(x: BaseAgent, utterance: str):
     """Returns True if the human has already seen the daily routine."""
@@ -184,9 +180,12 @@ def get_context(utterance: str) -> str:
     assert False, "similarity search failed"
 
 
+@set_attribute("return_direct", False)
 def get_knowledge_answer(x: BaseAgent, utterance: str):
     """Use this whenever the human asks any question about health or what to do.
-    Use this more than the other tools."""
+    Use this more than the other tools. If the question is about sleep, and the
+    answer is "Sorry I'm not sure." then try and answer the question another
+    way."""
     context = get_context(utterance)
     prompt = ChatPromptTemplate(
         messages=[

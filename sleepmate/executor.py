@@ -51,7 +51,7 @@ from .prompt import (
     get_system_prompt,
     get_tools,
 )
-from .user import get_user_from_id, get_user_from_username
+from .user import clear_db_for_user, get_user_from_id, get_user_from_username
 
 log = logging.getLogger(__name__)
 
@@ -266,7 +266,7 @@ class X(BaseAgent):
         clear_db_for_user(self.db_user_id)
 
     def get_agent_prompt(self, rigid=None) -> ChatPromptTemplate:
-        system = get_system_prompt(self.goal, get_user_from_id(self.db_user_id))
+        system = get_system_prompt(self)
         messages = [
             SystemMessagePromptTemplate.from_template(system),
             MessagesPlaceholder(variable_name="chat_history"),

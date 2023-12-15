@@ -1,3 +1,5 @@
+import logging
+
 from langchain.chains import LLMChain
 from langchain.memory import ConversationBufferMemory, ReadOnlySharedMemory
 from langchain.prompts import ChatPromptTemplate
@@ -5,6 +7,8 @@ from langchain.prompts import ChatPromptTemplate
 from .agent import BaseAgent
 from .models import MODELS
 from .prompt import get_template
+
+log = logging.getLogger(__name__)
 
 
 def get_completion(
@@ -25,15 +29,13 @@ def get_capabilities(x: BaseAgent, utterance: str) -> str:
     return get_completion(
         x.ro_memory,
         utterance,
-        get_template(x.goal, x.db_user_id, get_capabilities.__doc__),
+        get_template(x, get_capabilities.__doc__),
     )
 
 
 def get_greeting(x: BaseAgent, utterance: str) -> str:
     """Use this when the human says hello. Greet them by name."""
-    return get_completion(
-        x.ro_memory, utterance, get_template(x.goal, x.db_user_id, get_greeting.__doc__)
-    )
+    return get_completion(x.ro_memory, utterance, get_template(x, get_greeting.__doc__))
 
 
 def get_greeting_no_memory(x: BaseAgent, utterance: str) -> str:
@@ -46,7 +48,7 @@ def get_greeting_no_memory(x: BaseAgent, utterance: str) -> str:
             )
         ),
         utterance,
-        get_template(None, x.db_user_id, get_greeting_no_memory.__doc__),
+        get_template(x, get_greeting_no_memory.__doc__),
     )
 
 
@@ -60,7 +62,7 @@ def get_affirmation(x: BaseAgent, utterance: str) -> str:
     return get_completion(
         x.ro_memory,
         utterance,
-        get_template(x.goal, x.db_user_id, get_affirmation.__doc__),
+        get_template(x, get_affirmation.__doc__),
     )
 
 
@@ -75,7 +77,7 @@ def get_open_question(x: BaseAgent, utterance: str) -> str:
     return get_completion(
         x.ro_memory,
         utterance,
-        get_template(x.goal, x.db_user_id, get_open_question.__doc__),
+        get_template(x, get_open_question.__doc__),
     )
 
 
@@ -86,7 +88,7 @@ def get_refusal_acknowledgement(x: BaseAgent, utterance: str) -> str:
     return get_completion(
         x.ro_memory,
         utterance,
-        get_template(x.goal, x.db_user_id, get_refusal_acknowledgement.__doc__),
+        get_template(x, get_refusal_acknowledgement.__doc__),
     )
 
 
@@ -100,7 +102,7 @@ def get_listening_statement(x: BaseAgent, utterance: str) -> str:
     return get_completion(
         x.ro_memory,
         utterance,
-        get_template(x.goal, x.db_user_id, get_listening_statement.__doc__),
+        get_template(x, get_listening_statement.__doc__),
     )
 
 
