@@ -89,7 +89,7 @@ def get_system_prompt(
     stop_sequence: str = SLEEPMATE_STOP_SEQUENCE,
 ) -> str:
     system = SLEEPMATE_SYSTEM_DESCRIPTION
-    if not x.fixed_goal and x.goal is not None:
+    if x.goal is not None:
         system = (
             f"{system}{x.goal.description}"
             "Very important! Don't ask the human how you can assist them. "
