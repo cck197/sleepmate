@@ -124,7 +124,8 @@ GOALS = [
         - None of the above (skip)
 
         Once the humans has confirmed what devices they have, save a record of
-        the wearables to the database.
+        the wearables to the database. Says no or if they ask for which device
+        to get, assume they have none, and save a record.
         """,
     }
 ]

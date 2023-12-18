@@ -53,3 +53,17 @@ class TestWearableWhoop:
         for val in wearables.values():
             if isinstance(val, bool):
                 assert not val
+
+
+@pytest.mark.usefixtures("x")
+class TestWearableOfftrack1:
+    def test_should_be_able_handle_question_stay_on_track(self, x):
+        # jmes on Discord
+        x("Hi")
+        x("No, but should I get one?")
+        x("Which would you recommend?")
+        wearables = json.loads(get_wearables(x, ""))
+        log.info(f"{wearables=}")
+        for val in wearables.values():
+            if isinstance(val, bool):
+                assert not val
