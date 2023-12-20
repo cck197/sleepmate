@@ -63,7 +63,7 @@ def discourse():
     ):
         db_user = get_db_user(post)
         log.info(f"{db_user.to_mongo()=}")
-        x = X(username=db_user.username, hello=None, log_=log, display=False)
+        x = X(username=db_user.username, hello=None, log_=log)
         # The specific user has been mentioned (tagged) in the post
         topic_id = post.get("topic_id")
         post_number = post.get("post_number")
